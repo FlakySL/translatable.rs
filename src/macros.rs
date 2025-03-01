@@ -1,7 +1,6 @@
 use proc_macro::TokenStream;
 use syn::{parse::{Parse, ParseStream}, Expr, ExprLit, ExprPath, Lit, Result as SynResult, token::Static, Token};
 use quote::quote;
-
 use crate::translations::load_translation_static;
 
 pub struct RawTranslationArgs {
