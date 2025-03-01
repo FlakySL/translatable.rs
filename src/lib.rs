@@ -5,6 +5,7 @@ use syn::parse_macro_input;
 mod config;
 mod macros;
 mod translations;
+mod languages;
 
 #[proc_macro]
 pub fn translation(input: TokenStream) -> TokenStream {

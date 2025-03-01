@@ -2,14 +2,14 @@ use std::{fs::{read_dir, read_to_string}, io::Error as IoError, sync::OnceLock};
 use proc_macro::TokenStream;
 use thiserror::Error;
 use toml::{Table, de::Error as TomlError};
-use crate::{config::{load_config, ConfigError, SeekMode, TranslationOverlap}, macros::{TranslationLanguageType, TranslationPathType}};
+use crate::{config::{load_config, ConfigError, SeekMode, TranslationOverlap}, macros::{TranslationLanguageType, TranslationPathType}, languages::Iso639a};
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
     #[error("{0}")]
     Config(#[from] ConfigError),
 
-    #[error("{0:#}")]
+    #[error("An IO Error occurred: {0:#}")]
     Io(#[from] IoError),
 
     #[error("The path contains invalid unicode characters.")]
@@ -18,9 +18,15 @@ pub enum TranslationError {
     #[error(
         "Toml parse error '{}'{}",
         .0.message(),
-        .0.span().map(|l| format!(" in {}:{}", l.start, l.end)).unwrap_or("".into())
+        .0.span().map(|l| format!(" in {}:{}:{}", .1, l.start, l.end)).unwrap_or("".into())
     )]
-    ParseToml(#[from] TomlError)
+    ParseToml(TomlError, String),
+
+    #[error(
+        "'{0}' is not valid ISO 639-1, valid languages include: {valid}",
+        valid = Iso639a::languages().join(", ")
+    )]
+    InvalidLangauge(String)
 }
 
 static TRANSLATIONS: OnceLock<Vec<Table>> = OnceLock::new();
@@ -71,7 +77,8 @@ fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
         .iter()
         .map(|path| Ok(
             read_to_string(&path)?
-                .parse::<Table>()?
+                .parse::<Table>()
+                .map_err(|err| TranslationError::ParseToml(err, path.clone()))?
         ))
         .collect::<Result<Vec<_>, TranslationError>>()?;
 
@@ -81,6 +88,10 @@ fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
 pub fn load_translation_static(lang: &str, path: &str) -> Result<Option<String>, TranslationError> {
     let translations = load_translations()?;
     let config = load_config()?;
+
+    if !Iso639a::is_valid(lang) {
+        return Err(TranslationError::InvalidLangauge(lang.into()))
+    }
 
     let mut choosen_translation = None;
     for translation in translations {
