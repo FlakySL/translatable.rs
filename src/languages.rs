@@ -1,5 +1,4 @@
 use std::str::FromStr;
-
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 #[derive(Debug, EnumIter, Display, EnumString)]

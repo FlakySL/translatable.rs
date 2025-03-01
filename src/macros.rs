@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
 use crate::{languages::Iso639a, translations::load_translation_static};
 use proc_macro::TokenStream;
 use quote::quote;
+use std::str::FromStr;
 use syn::{
     Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token,
     parse::{Parse, ParseStream},
