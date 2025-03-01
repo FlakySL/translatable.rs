@@ -18,9 +18,9 @@ pub enum TranslationError {
     #[error(
         "Toml parse error '{}'{}",
         .0.message(),
-        .0.span().map(|l| format!(" in {}:{}", l.start, l.end)).unwrap_or("".into())
+        .0.span().map(|l| format!(" in {}:{}:{}", .1, l.start, l.end)).unwrap_or("".into())
     )]
-    ParseToml(#[from] TomlError),
+    ParseToml(TomlError, String),
 
     #[error(
         "'{0}' is not valid ISO 639-1, valid languages include: {valid}",
@@ -77,7 +77,8 @@ fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
         .iter()
         .map(|path| Ok(
             read_to_string(&path)?
-                .parse::<Table>()?
+                .parse::<Table>()
+                .map_err(|err| TranslationError::ParseToml(err, path.clone()))?
         ))
         .collect::<Result<Vec<_>, TranslationError>>()?;
 
