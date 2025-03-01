@@ -1,5 +1,4 @@
 use strum::EnumIter;
-use strum::EnumString;
 use strum::IntoEnumIterator;
 
 #[derive(Debug, EnumIter)]

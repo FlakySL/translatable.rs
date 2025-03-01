@@ -5,11 +5,15 @@ use toml::{from_str as toml_from_str, de::Error as TomlError};
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("{0:#}")]
+    #[error("An IO error occurred: {0:#}")]
     Io(#[from] IoError),
 
-    #[error("{0:#}")]
-    Toml(#[from] TomlError)
+    #[error(
+        "Toml parse error '{}'{}",
+        .0.message(),
+        .0.span().map(|l| format!(" in ./translatable.toml:{}:{}", l.start, l.end)).unwrap_or("".into())
+    )]
+    ParseToml(#[from] TomlError)
 }
 
 #[derive(Deserialize)]

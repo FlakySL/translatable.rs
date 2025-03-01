@@ -9,7 +9,7 @@ pub enum TranslationError {
     #[error("{0}")]
     Config(#[from] ConfigError),
 
-    #[error("{0:#}")]
+    #[error("An IO Error occurred: {0:#}")]
     Io(#[from] IoError),
 
     #[error("The path contains invalid unicode characters.")]
