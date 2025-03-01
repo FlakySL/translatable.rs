@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use syn::{parse::{Parse, ParseStream}, Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
+use syn::{parse::{Parse, ParseStream}, Expr, ExprLit, ExprPath, Lit, Result as SynResult, token::Static, Token};
 use quote::{quote, ToTokens};
 
 use crate::translations::load_translation_static;
@@ -7,7 +7,7 @@ use crate::translations::load_translation_static;
 pub struct RawTranslationArgs {
     language: Expr,
     _comma: Token![,],
-    static_marker: Option<Token![#]>,
+    static_marker: Option<Static>,
     path: Expr
 }
 
