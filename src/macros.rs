@@ -102,7 +102,7 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
                         .unwrap_or_else(|_| lang.clone());
 
                     let error_fmt = format!(
-                        "The language '{lang_name} ({lang})' is not available for '{path}'"
+                        "The language '{lang}' ({lang_name}) is not available for '{path}'"
                     );
 
                     quote!(compile_error!(#error_fmt)).into()
