@@ -1,5 +1,6 @@
 use std::{fs::{read_dir, read_to_string}, io::Error as IoError, sync::OnceLock};
 use proc_macro::TokenStream;
+use strum::IntoEnumIterator;
 use thiserror::Error;
 use toml::{de::Error as TomlError, Table, Value};
 use crate::{config::{load_config, ConfigError, SeekMode, TranslationOverlap}, macros::{TranslationLanguageType, TranslationPathType}, languages::Iso639a};
@@ -18,15 +19,24 @@ pub enum TranslationError {
     #[error(
         "Toml parse error '{}'{}",
         .0.message(),
-        .0.span().map(|l| format!(" in {}:{}:{}", .1, l.start, l.end)).unwrap_or("".into())
+        .0.span()
+            .map(|l| format!(" in {}:{}:{}", .1, l.start, l.end))
+            .unwrap_or("".into())
     )]
     ParseToml(TomlError, String),
 
     #[error(
-        "'{0}' is not valid ISO 639-1, valid languages include: {valid}",
-        valid = Iso639a::languages().join(", ")
+        "'{0}' is not valid ISO 639-1, valid languages including '{0}' are:\n{valid}",
+        valid = Iso639a::iter()
+            .filter(|lang| format!("{lang:?}")
+                .to_lowercase()
+                .contains(&.0.to_lowercase()
+            ))
+            .map(|lang| format!("{} ({lang:#})", format!("{lang:?}").to_lowercase()))
+            .collect::<Vec<_>>()
+            .join(",\n")
     )]
-    InvalidLangauge(String),
+    InvalidLanguage(String)
 
     #[error("{}", "
 Translation files can only contain objects,
@@ -175,7 +185,7 @@ pub fn load_translation_static(lang: &str, path: &str) -> Result<Option<String>,
     let config = load_config()?;
 
     if !Iso639a::is_valid(lang) {
-        return Err(TranslationError::InvalidLangauge(lang.into()))
+        return Err(TranslationError::InvalidLanguage(lang.into()))
     }
 
     let mut choosen_translation = None;
