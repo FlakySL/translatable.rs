@@ -376,10 +376,4 @@ impl Iso639a {
     pub fn is_valid(lang: &str) -> bool {
         Iso639a::from_str(lang).is_ok()
     }
-
-    pub fn languages() -> Vec<String> {
-        Self::iter()
-            .map(|lang| format!("{:?}", lang).to_lowercase())
-            .collect()
-    }
 }
