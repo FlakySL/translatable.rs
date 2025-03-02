@@ -2,7 +2,7 @@ use std::{fs::{read_dir, read_to_string}, io::Error as IoError, sync::OnceLock};
 use proc_macro::TokenStream;
 use strum::IntoEnumIterator;
 use thiserror::Error;
-use toml::{Table, de::Error as TomlError};
+use toml::{de::Error as TomlError, Table, Value};
 use crate::{config::{load_config, ConfigError, SeekMode, TranslationOverlap}, macros::{TranslationLanguageType, TranslationPathType}, languages::Iso639a};
 
 #[derive(Error, Debug)]
@@ -37,6 +37,15 @@ pub enum TranslationError {
             .join(",\n")
     )]
     InvalidLanguage(String)
+
+    #[error("{}", "
+Translation files can only contain objects,
+objects in objects, if an object contains a string,
+all it's other branches should also be strings
+where it's keys are valid ISO 639-1 languages
+in lowercase.
+    ".trim())]
+    InvalidTomlFormat
 }
 
 static TRANSLATIONS: OnceLock<Vec<Table>> = OnceLock::new();
@@ -69,6 +78,78 @@ fn walk_dir(path: &str) -> Result<Vec<String>, TranslationError> {
     Ok(result)
 }
 
+fn translations_valid(table: &Table) -> bool {
+    let mut contains_translation = false;
+    let mut contains_table = false;
+
+    for (key, raw) in table {
+        match raw {
+            Value::Table(table) => {
+                // if the current nesting contains a translation
+                // it can't contain anything else, thus invalid.
+                if contains_translation {
+                    return false;
+                }
+
+                // if the value is a table call the function recursively.
+                // if the nesting it's invalid it invalidates the whole file.
+                if !translations_valid(table) {
+                    return false;
+                }
+
+                // since it passes the validation and it's inside the Table match
+                // it contains a table.
+                contains_table = true;
+            },
+
+            Value::String(translation) => {
+                // if the current nesting contains a table
+                // it can't contain anything else, thus invalid.
+                if contains_table {
+                    return false;
+                }
+
+                // an object that contains translations
+                // can't contain an invalid key.
+                if !Iso639a::is_valid(&key) {
+                    return false;
+                }
+
+                // a translation can't contain unclosed
+                // delimiters for '{' and '}', because
+                // these are used for templating.
+                let mut open_templates = 0i32;
+
+                for c in translation.chars() {
+                    match c {
+                        '{' => open_templates += 1,
+                        '}' => open_templates -= 1,
+                        _ => {}
+                    }
+                }
+
+                if open_templates != 0 {
+                    return false;
+                }
+
+                // if all the checks above pass
+                // it means the table defintively
+                // contains a translation.
+                contains_translation = true;
+            },
+
+            // if the table contains anything else than
+            // a translation (string) or a nested table
+            // it's automatically invalid.
+            _ => return false
+        }
+    }
+
+    // if nothing returns false it means everything
+    // is valid.
+    true
+}
+
 fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
     if let Some(translations) = TRANSLATIONS.get() {
         return Ok(translations);
@@ -88,7 +169,11 @@ fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
         .map(|path| Ok(
             read_to_string(&path)?
                 .parse::<Table>()
-                .map_err(|err| TranslationError::ParseToml(err, path.clone()))?
+                .map_err(|err| TranslationError::ParseToml(err, path.clone()))
+                .and_then(|table| translations_valid(&table)
+                    .then_some(table)
+                    .ok_or(TranslationError::InvalidTomlFormat)
+                )?
         ))
         .collect::<Result<Vec<_>, TranslationError>>()?;
 
