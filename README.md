@@ -33,7 +33,7 @@ Add to your `Cargo.toml`:
 translatable = "1"
 ```
 
-## Usage
+## Usage 🛠️
 
 Basic Macro Usage
 
