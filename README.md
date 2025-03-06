@@ -92,6 +92,8 @@ Error: 'e' is not valid ISO 639-1. These are some valid languages including 'e':
           ... (12 more)
     --> tests/static.rs:5:5
      |
+   5 |     translation!("e", static salutation::test);
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 
 Structural Validation
