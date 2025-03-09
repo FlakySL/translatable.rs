@@ -1,6 +1,12 @@
 use std::str::FromStr;
-use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
+use strum::{Display, EnumIter, EnumString};
 
+/// ISO 639-1 language code implementation with validation
+///
+/// Provides two-way mapping between language codes and names with:
+/// - Case-insensitive parsing
+/// - Strict validation
+/// - Complete ISO 639-1 coverage
 #[derive(Debug, EnumIter, Display, EnumString)]
 #[strum(ascii_case_insensitive)]
 pub enum Iso639a {
@@ -373,6 +379,17 @@ pub enum Iso639a {
 }
 
 impl Iso639a {
+    /// Validates if a string represents a valid ISO 639-1 language
+    ///
+    /// # Arguments
+    /// * `lang` - Input string to validate (case-insensitive)
+    ///
+    /// # Examples
+    /// ```ignore
+    /// assert!(Iso639a::is_valid("en"));
+    /// assert!(Iso639a::is_valid("English"));
+    /// assert!(!Iso639a::is_valid("xx"));
+    /// ```
     pub fn is_valid(lang: &str) -> bool {
         Iso639a::from_str(lang).is_ok()
     }
