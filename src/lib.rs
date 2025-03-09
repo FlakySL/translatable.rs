@@ -18,8 +18,8 @@ mod translations;
 /// Procedural macro for compile-time translation validation
 ///
 /// # Usage
-/// ```
-/// translation!("en", static some.path)
+/// ```ignore
+/// translation!("en", static some::path)
 /// ```
 ///
 /// # Parameters

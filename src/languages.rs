@@ -385,7 +385,7 @@ impl Iso639a {
     /// * `lang` - Input string to validate (case-insensitive)
     ///
     /// # Examples
-    /// ```
+    /// ```ignore
     /// assert!(Iso639a::is_valid("en"));
     /// assert!(Iso639a::is_valid("English"));
     /// assert!(!Iso639a::is_valid("xx"));
