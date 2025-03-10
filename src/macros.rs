@@ -2,16 +2,21 @@ use crate::{languages::Iso639a, translations::load_translation_static};
 use proc_macro::TokenStream;
 use quote::quote;
 use std::str::FromStr;
-use syn::{
-    Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token,
-    parse::{Parse, ParseStream},
-    token::Static,
-};
+use syn::parse::{Parse, ParseStream};
+use syn::token::Static;
+use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
 
+/// Internal representation of macro arguments before processing
+///
+/// Parses input in the format:
+/// `(language_expression, static translation_path)`
 pub struct RawTranslationArgs {
+    /// Language specification (literal or expression)
     language: Expr,
     _comma: Token![,],
+    /// Static marker for path analysis
     static_marker: Option<Static>,
+    /// Translation path specification
     path: Expr,
 }
 

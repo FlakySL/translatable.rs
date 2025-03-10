@@ -1,21 +1,33 @@
-use std::{fs::{read_dir, read_to_string}, io::Error as IoError, sync::OnceLock};
+//! Translation handling module that loads and validates translation files,
+//! and provides functionality to retrieve translations based on language and path.
+
+use crate::config::{ConfigError, SeekMode, TranslationOverlap, load_config};
+use crate::languages::Iso639a;
+use crate::macros::{TranslationLanguageType, TranslationPathType};
 use proc_macro::TokenStream;
+use std::fs::{read_dir, read_to_string};
+use std::io::Error as IoError;
+use std::sync::OnceLock;
 use strum::IntoEnumIterator;
 use thiserror::Error;
-use toml::{de::Error as TomlError, Table, Value};
-use crate::{config::{load_config, ConfigError, SeekMode, TranslationOverlap}, macros::{TranslationLanguageType, TranslationPathType}, languages::Iso639a};
+use toml::{Table, Value, de::Error as TomlError};
 
+/// Errors that can occur during translation processing.
 #[derive(Error, Debug)]
 pub enum TranslationError {
-    #[error("{0}")]
+    /// Configuration-related error
+    #[error("{0:#}")]
     Config(#[from] ConfigError),
 
+    /// IO operation error
     #[error("An IO Error occurred: {0:#}")]
     Io(#[from] IoError),
 
+    /// Path contains invalid Unicode characters
     #[error("The path contains invalid unicode characters.")]
     InvalidUnicode,
 
+    /// TOML parsing error with location information
     #[error(
         "Toml parse error '{}'{}",
         .0.message(),
@@ -25,59 +37,59 @@ pub enum TranslationError {
     )]
     ParseToml(TomlError, String),
 
+    /// Invalid language code error with suggestions
     #[error(
-        "'{0}' is not valid ISO 639-1, valid languages including '{0}' are:\n{valid}",
-        valid = Iso639a::iter()
-            .filter(|lang| format!("{lang:?}")
-                .to_lowercase()
-                .contains(&.0.to_lowercase()
-            ))
-            .map(|lang| format!("{} ({lang:#})", format!("{lang:?}").to_lowercase()))
-            .collect::<Vec<_>>()
-            .join(",\n")
+        "'{0}' is not valid ISO 639-1. These are some valid languages including '{0}':\n{sorted_list}",
+        sorted_list = .1.join(",\n")
     )]
-    InvalidLanguage(String)
+    InvalidLanguage(String, Vec<String>),
 
-    #[error("{}", "
-Translation files can only contain objects,
-objects in objects, if an object contains a string,
-all it's other branches should also be strings
-where it's keys are valid ISO 639-1 languages
-in lowercase.
-    ".trim())]
-    InvalidTomlFormat
+    /// Invalid TOML structure in specific file
+    #[error(
+        "Invalid TOML structure in file {0}: Translation files must contain either nested tables or language translations, but not both at the same level."
+    )]
+    InvalidTomlFormat(String),
 }
 
+/// Global cache for loaded translations
 static TRANSLATIONS: OnceLock<Vec<Table>> = OnceLock::new();
 
+/// Recursively walk a directory and collect all file paths
+///
+/// # Implementation Details
+/// Uses iterative depth-first search to avoid stack overflow
+/// Handles filesystem errors and invalid Unicode paths
 fn walk_dir(path: &str) -> Result<Vec<String>, TranslationError> {
-    let directory = read_dir(path)?
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()?;
-
+    let mut stack = vec![path.to_string()];
     let mut result = Vec::new();
 
-    for path in directory {
-        let path = path.path();
+    // Use iterative approach to avoid recursion depth limits
+    while let Some(current_path) = stack.pop() {
+        let directory = read_dir(&current_path)?.collect::<Result<Vec<_>, _>>()?;
 
-        if path.is_dir() {
-            result.extend(walk_dir(
-                path
-                    .to_str()
-                    .ok_or(TranslationError::InvalidUnicode)?
-            )?);
-        } else {
-            result.push(
-                path
-                    .to_string_lossy()
-                    .to_string()
-            );
+        for entry in directory {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(
+                    path.to_str()
+                        .ok_or(TranslationError::InvalidUnicode)?
+                        .to_string(),
+                );
+            } else {
+                result.push(path.to_string_lossy().to_string());
+            }
         }
     }
 
     Ok(result)
 }
 
+/// Validate TOML structure for translation files
+///
+/// # Validation Rules
+/// 1. Nodes must be either all tables or all translations
+/// 2. Translation keys must be valid ISO 639-1 codes
+/// 3. Template brackets must be balanced in translation values
 fn translations_valid(table: &Table) -> bool {
     let mut contains_translation = false;
     let mut contains_table = false;
@@ -85,128 +97,127 @@ fn translations_valid(table: &Table) -> bool {
     for (key, raw) in table {
         match raw {
             Value::Table(table) => {
-                // if the current nesting contains a translation
-                // it can't contain anything else, thus invalid.
-                if contains_translation {
+                if contains_translation || !translations_valid(table) {
                     return false;
                 }
-
-                // if the value is a table call the function recursively.
-                // if the nesting it's invalid it invalidates the whole file.
-                if !translations_valid(table) {
-                    return false;
-                }
-
-                // since it passes the validation and it's inside the Table match
-                // it contains a table.
                 contains_table = true;
-            },
-
+            }
             Value::String(translation) => {
-                // if the current nesting contains a table
-                // it can't contain anything else, thus invalid.
-                if contains_table {
+                if contains_table || !Iso639a::is_valid(key) {
                     return false;
                 }
 
-                // an object that contains translations
-                // can't contain an invalid key.
-                if !Iso639a::is_valid(&key) {
+                // Check balanced template delimiters
+                let balance = translation.chars().fold(0i32, |acc, c| match c {
+                    '{' => acc + 1,
+                    '}' => acc - 1,
+                    _ => acc,
+                });
+                if balance != 0 {
                     return false;
                 }
 
-                // a translation can't contain unclosed
-                // delimiters for '{' and '}', because
-                // these are used for templating.
-                let mut open_templates = 0i32;
-
-                for c in translation.chars() {
-                    match c {
-                        '{' => open_templates += 1,
-                        '}' => open_templates -= 1,
-                        _ => {}
-                    }
-                }
-
-                if open_templates != 0 {
-                    return false;
-                }
-
-                // if all the checks above pass
-                // it means the table defintively
-                // contains a translation.
                 contains_translation = true;
-            },
-
-            // if the table contains anything else than
-            // a translation (string) or a nested table
-            // it's automatically invalid.
-            _ => return false
+            }
+            _ => return false,
         }
     }
-
-    // if nothing returns false it means everything
-    // is valid.
     true
 }
 
+/// Load translations from configured directory with thread-safe caching
+///
+/// # Returns
+/// Reference to loaded translations or TranslationError
 fn load_translations() -> Result<&'static Vec<Table>, TranslationError> {
     if let Some(translations) = TRANSLATIONS.get() {
         return Ok(translations);
     }
 
     let config = load_config()?;
-
     let mut translation_paths = walk_dir(config.path())?;
-    translation_paths.sort_by_key(|path| path.to_lowercase());
 
+    // Sort paths case-insensitively
+    translation_paths.sort_by_key(|path| path.to_lowercase());
     if let SeekMode::Unalphabetical = config.seek_mode() {
         translation_paths.reverse();
     }
 
     let translations = translation_paths
         .iter()
-        .map(|path| Ok(
-            read_to_string(&path)?
+        .map(|path| {
+            let content = read_to_string(path)?;
+            let table = content
                 .parse::<Table>()
-                .map_err(|err| TranslationError::ParseToml(err, path.clone()))
-                .and_then(|table| translations_valid(&table)
-                    .then_some(table)
-                    .ok_or(TranslationError::InvalidTomlFormat)
-                )?
-        ))
+                .map_err(|err| TranslationError::ParseToml(err, path.clone()))?;
+
+            if !translations_valid(&table) {
+                return Err(TranslationError::InvalidTomlFormat(path.clone()));
+            }
+
+            Ok(table)
+        })
         .collect::<Result<Vec<_>, TranslationError>>()?;
 
     Ok(TRANSLATIONS.get_or_init(|| translations))
 }
 
+/// Load translation for given language and path
+///
+/// # Arguments
+/// * `lang` - ISO 639-1 language code
+/// * `path` - Dot-separated translation path
+///
+/// # Returns
+/// Option<String> with translation or TranslationError
 pub fn load_translation_static(lang: &str, path: &str) -> Result<Option<String>, TranslationError> {
     let translations = load_translations()?;
     let config = load_config()?;
 
     if !Iso639a::is_valid(lang) {
-        return Err(TranslationError::InvalidLanguage(lang.into()))
+        let lang_lower = lang.to_lowercase();
+
+        let similarities = Iso639a::iter()
+            .filter(|lang| format!("{lang:?}").to_lowercase().contains(&lang_lower))
+            .map(|lang| format!("{} ({lang:#})", format!("{lang:?}").to_lowercase()))
+            .collect::<Vec<_>>();
+
+        return Err(TranslationError::InvalidLanguage(
+            lang.to_string(),
+            similarities,
+        ));
     }
 
-    let mut choosen_translation = None;
+    let mut chosen_translation = None;
     for translation in translations {
-        choosen_translation = path
+        if let Some(value) = path
             .split('.')
-            .fold(Some(translation), |acc, key| acc?.get(key)?.as_table())
-            .and_then(|translation| translation.get(lang))
-            .map(|translation| translation.to_string());
-
-        if choosen_translation.is_some() && matches!(config.overlap(), TranslationOverlap::Ignore) {
-            break;
+            .try_fold(translation, |acc, key| acc.get(key)?.as_table())
+            .and_then(|table| table.get(lang))
+        {
+            chosen_translation = Some(value.to_string());
+            if matches!(config.overlap(), TranslationOverlap::Ignore) {
+                break;
+            }
         }
     }
 
-    Ok(choosen_translation)
+    Ok(chosen_translation)
 }
 
-pub fn load_translation_dynamic(lang: TranslationLanguageType, path: TranslationPathType) -> TokenStream {
+/// Dynamic translation loading for procedural macros
+///
+/// # Arguments
+/// * `lang` - Language type from macro
+/// * `path` - Path type from macro
+///
+/// # Returns
+/// TokenStream for generated code
+pub fn load_translation_dynamic(
+    lang: TranslationLanguageType,
+    path: TranslationPathType,
+) -> TokenStream {
     let lang = lang.dynamic();
     let path = path.dynamic();
-
-    todo!()
+    todo!("Implement dynamic translation loading")
 }
