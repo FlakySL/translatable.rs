@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use strum::{Display, EnumIter, EnumString};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 /// ISO 639-1 language code implementation with validation
 ///
@@ -392,5 +392,16 @@ impl Iso639a {
     /// ```
     pub fn is_valid(lang: &str) -> bool {
         Iso639a::from_str(lang).is_ok()
+    }
+
+    pub fn get_similarities(lang: &str) -> Vec<String> {
+        Self::iter()
+            .map(|variant| variant.to_string())
+            .filter(|variant| variant.contains(lang))
+            .collect()
+    }
+
+    pub fn eq_insensitive(&self, other: &str) -> bool {
+        format!("{self:?}").to_lowercase() == other.to_lowercase()
     }
 }

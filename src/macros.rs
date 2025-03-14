@@ -1,10 +1,10 @@
-use crate::{languages::Iso639a, translations::load_translation_static};
 use proc_macro::TokenStream;
 use quote::quote;
-use std::str::FromStr;
 use syn::parse::{Parse, ParseStream};
 use syn::token::Static;
 use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
+
+use crate::translations::generation::load_translation_static;
 
 /// Internal representation of macro arguments before processing
 ///
@@ -13,6 +13,7 @@ use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
 pub struct RawTranslationArgs {
     /// Language specification (literal or expression)
     language: Expr,
+    /// Argument seprator.
     _comma: Token![,],
     /// Static marker for path analysis
     static_marker: Option<Static>,
@@ -20,8 +21,25 @@ pub struct RawTranslationArgs {
     path: Expr,
 }
 
+/// A TranslationPathType is a wrapper to the path
+/// argument, this provides feedback on how to
+/// interact with the user provided path.
 pub enum TranslationPathType {
+    /// An OnScopeExpression represents
+    /// any expresion that evaluates to
+    /// a string, that expression is dynamic
+    /// and it's evaluated on runtime, so
+    /// the means to generate checks and errors
+    /// are limited.
     OnScopeExpression(TokenStream),
+
+    /// A CompileTimePath represents a path
+    /// that's prefixed with the `static`
+    /// keyword, if the passed expression is
+    /// this one we read the translations
+    /// directly, if a translation for that
+    /// path does not exist, a compile time
+    /// error is generated.
     CompileTimePath(String),
 }
 
@@ -95,30 +113,9 @@ impl Into<TranslationArgs> for RawTranslationArgs {
     }
 }
 
-pub fn translation_macro(args: TranslationArgs) -> TokenStream {
-    if let TranslationPathType::CompileTimePath(path) = args.path {
-        if let TranslationLanguageType::CompileTimeLiteral(lang) = args.language {
-            return match load_translation_static(&lang, &path) {
-                Ok(Some(translation)) => quote!(#translation).into(),
-
-                Ok(None) => {
-                    let lang_name = Iso639a::from_str(&lang)
-                        .map(|l| l.to_string())
-                        .unwrap_or_else(|_| lang.clone());
-
-                    let error_fmt = format!(
-                        "The language '{lang}' ({lang_name}) is not available for '{path}'"
-                    );
-
-                    quote!(compile_error!(#error_fmt)).into()
-                }
-
-                Err(err) => {
-                    let error_fmt = err.to_string();
-                    quote!(compile_error!(#error_fmt)).into()
-                }
-            };
-        }
+pub fn translation_macro(_args: TranslationArgs) -> TokenStream {
+    if let TranslationPathType::CompileTimePath(path) = _args.path {
+        load_translation_static(None, path);
     }
 
     quote!("").into()
