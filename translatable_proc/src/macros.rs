@@ -10,7 +10,7 @@ use crate::translations::generation::load_translation_static;
 ///
 /// Parses input in the format:
 /// `(language_expression, static translation_path)`
-pub struct RawTranslationArgs {
+pub struct RawMacroArgs {
     /// Language specification (literal or expression)
     language: Expr,
     /// Argument seprator.
@@ -24,7 +24,7 @@ pub struct RawTranslationArgs {
 /// A TranslationPathType is a wrapper to the path
 /// argument, this provides feedback on how to
 /// interact with the user provided path.
-pub enum TranslationPathType {
+pub enum PathType {
     /// An OnScopeExpression represents
     /// any expresion that evaluates to
     /// a string, that expression is dynamic
@@ -43,19 +43,19 @@ pub enum TranslationPathType {
     CompileTimePath(String),
 }
 
-pub enum TranslationLanguageType {
+pub enum LanguageType {
     OnScopeExpression(TokenStream),
     CompileTimeLiteral(String),
 }
 
 pub struct TranslationArgs {
-    language: TranslationLanguageType,
-    path: TranslationPathType,
+    language: LanguageType,
+    path: PathType,
 }
 
-impl Parse for RawTranslationArgs {
+impl Parse for RawMacroArgs {
     fn parse(input: ParseStream) -> SynResult<Self> {
-        Ok(RawTranslationArgs {
+        Ok(RawMacroArgs {
             language: input.parse()?,
             _comma: input.parse()?,
             static_marker: input.parse()?,
@@ -64,7 +64,7 @@ impl Parse for RawTranslationArgs {
     }
 }
 
-impl TranslationPathType {
+impl PathType {
     pub fn dynamic(self) -> TokenStream {
         match self {
             Self::OnScopeExpression(tokens) => tokens,
@@ -73,7 +73,7 @@ impl TranslationPathType {
     }
 }
 
-impl TranslationLanguageType {
+impl LanguageType {
     pub fn dynamic(self) -> TokenStream {
         match self {
             Self::OnScopeExpression(tokens) => tokens,
@@ -82,7 +82,7 @@ impl TranslationLanguageType {
     }
 }
 
-impl Into<TranslationArgs> for RawTranslationArgs {
+impl Into<TranslationArgs> for RawMacroArgs {
     fn into(self) -> TranslationArgs {
         let is_path_static = self.static_marker.is_some();
 
@@ -91,13 +91,13 @@ impl Into<TranslationArgs> for RawTranslationArgs {
                 Expr::Lit(ExprLit {
                     lit: Lit::Str(lit_str),
                     ..
-                }) => TranslationLanguageType::CompileTimeLiteral(lit_str.value()),
-                other => TranslationLanguageType::OnScopeExpression(quote!(#other).into()),
+                }) => LanguageType::CompileTimeLiteral(lit_str.value()),
+                other => LanguageType::OnScopeExpression(quote!(#other).into()),
             },
 
             path: match self.path {
                 Expr::Path(ExprPath { path, .. }) if is_path_static => {
-                    TranslationPathType::CompileTimePath(
+                    PathType::CompileTimePath(
                         path.segments
                             .iter()
                             .map(|s| s.ident.to_string())
@@ -107,14 +107,14 @@ impl Into<TranslationArgs> for RawTranslationArgs {
                     )
                 }
 
-                path => TranslationPathType::OnScopeExpression(quote!(#path).into()),
+                path => PathType::OnScopeExpression(quote!(#path).into()),
             },
         }
     }
 }
 
 pub fn translation_macro(_args: TranslationArgs) -> TokenStream {
-    if let TranslationPathType::CompileTimePath(path) = _args.path {
+    if let PathType::CompileTimePath(path) = _args.path {
         load_translation_static(None, path);
     }
 

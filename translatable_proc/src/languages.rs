@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 /// ISO 639-1 language code implementation with validation
@@ -7,7 +6,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 /// - Case-insensitive parsing
 /// - Strict validation
 /// - Complete ISO 639-1 coverage
-#[derive(Debug, EnumIter, Display, EnumString)]
+#[derive(Debug, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
 #[strum(ascii_case_insensitive)]
 pub enum Iso639a {
     #[strum(serialize = "Abkhazian", serialize = "ab")]
@@ -379,29 +378,16 @@ pub enum Iso639a {
 }
 
 impl Iso639a {
-    /// Validates if a string represents a valid ISO 639-1 language
-    ///
-    /// # Arguments
-    /// * `lang` - Input string to validate (case-insensitive)
-    ///
-    /// # Examples
-    /// ```ignore
-    /// assert!(Iso639a::is_valid("en"));
-    /// assert!(Iso639a::is_valid("English"));
-    /// assert!(!Iso639a::is_valid("xx"));
-    /// ```
-    pub fn is_valid(lang: &str) -> bool {
-        Iso639a::from_str(lang).is_ok()
-    }
-
     pub fn get_similarities(lang: &str) -> Vec<String> {
         Self::iter()
             .map(|variant| variant.to_string())
             .filter(|variant| variant.contains(lang))
             .collect()
     }
+}
 
-    pub fn eq_insensitive(&self, other: &str) -> bool {
+impl PartialEq<String> for Iso639a {
+    fn eq(&self, other: &String) -> bool {
         format!("{self:?}").to_lowercase() == other.to_lowercase()
     }
 }

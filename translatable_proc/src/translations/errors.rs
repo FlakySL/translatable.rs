@@ -1,4 +1,4 @@
-use crate::{config::ConfigError, languages::Iso639a};
+use crate::{data::{config::ConfigError, translations::TransformError}, languages::Iso639a};
 use std::io::Error as IoError;
 use thiserror::Error;
 use toml::de::Error as TomlError;
@@ -37,9 +37,9 @@ pub enum TranslationError {
 
     /// Invalid TOML structure in specific file
     #[error(
-        "Invalid TOML structure in file {0}: Translation files must contain either nested tables or language translations, but not both at the same level."
+        "Invalid TOML structure in file {1}: {0}"
     )]
-    InvalidTomlFormat(String),
+    InvalidTomlFormat(TransformError, String),
 
     #[error("The path '{0}' is not found in any of the translation files.")]
     PathNotFound(String),
