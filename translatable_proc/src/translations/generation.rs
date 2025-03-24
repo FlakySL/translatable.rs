@@ -40,6 +40,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
     Ok(
         quote! {
             let language: String = (#lang).into();
+            let language = language.to_lowercase();
 
             let valid_lang = vec![#(#available_langs)*]
                 .iter()
@@ -73,11 +74,21 @@ pub fn load_translation_static(static_lang: Option<Iso639a>, path: String) -> Re
             },
 
             None => {
+                let translation_object = translation_object
+                    .iter()
+                    .map(|(key, value)| {
+                        let key = format!("{key:?}").to_lowercase();
+                        quote! { (stringify!(#key), stringify!(#value)) }
+                    });
+
                 quote! {
                     if valid_lang {
-
+                        Ok(vec![#(#translation_object),*]
+                            .iter()
+                            .collect::<std::collections::HashMap<_, _>>()
+                            .get(&language))
                     } else {
-
+                        Err(translatable::Error::InvalidLanguage(language))
                     }
                 }
             }
