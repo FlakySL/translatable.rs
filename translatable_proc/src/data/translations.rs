@@ -151,7 +151,7 @@ impl Into<TokenStream> for NestingType {
                     });
 
                 quote! {
-                    NestingType::Object(vec![#(#entries),*].into_iter().collect())
+                    translatable::internal::NestingType::Object(vec![#(#entries),*].into_iter().collect())
                 }
             },
 
@@ -166,7 +166,7 @@ impl Into<TokenStream> for NestingType {
                     });
 
                 quote! {
-                    NestingType::Translation(vec![#(#entries),*].into_iter().collect())
+                    translatable::internal::NestingType::Translation(vec![#(#entries),*].into_iter().collect())
                 }
             }
         }

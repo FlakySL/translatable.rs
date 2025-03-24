@@ -83,10 +83,11 @@ pub fn load_translation_static(static_lang: Option<Iso639a>, path: String) -> Re
 
                 quote! {
                     if valid_lang {
-                        Ok(vec![#(#translation_object),*]
+                        vec![#(#translation_object),*]
                             .iter()
                             .collect::<std::collections::HashMap<_, _>>()
-                            .get(&language))
+                            .get(&language)
+                            .ok_or(translatable::Error::LanguageNotAvailable(language, stringify!(#path).to_string()))
                     } else {
                         Err(translatable::Error::InvalidLanguage(language))
                     }

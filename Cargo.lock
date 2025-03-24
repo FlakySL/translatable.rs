@@ -225,6 +225,7 @@ dependencies = [
 name = "translatable"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
  "translatable_proc",
  "trybuild",
 ]
