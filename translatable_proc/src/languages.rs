@@ -6,7 +6,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 /// - Case-insensitive parsing
 /// - Strict validation
 /// - Complete ISO 639-1 coverage
-#[derive(Debug, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
 #[strum(ascii_case_insensitive)]
 pub enum Iso639a {
     #[strum(serialize = "Abkhazian", serialize = "ab")]

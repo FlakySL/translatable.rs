@@ -1,5 +1,6 @@
 use crate::{data::{config::ConfigError, translations::TransformError}, languages::Iso639a};
 use std::io::Error as IoError;
+use syn::Error as SynError;
 use thiserror::Error;
 use toml::de::Error as TomlError;
 
@@ -45,5 +46,8 @@ pub enum TranslationError {
     PathNotFound(String),
 
     #[error("The language '{0:?}' ({0:#}) is not available for the '{1}' translation.")]
-    LanguageNotAvailable(Iso639a, String)
+    LanguageNotAvailable(Iso639a, String),
+
+    #[error("Error parsing macro.")]
+    MacroError(#[from] SynError)
 }

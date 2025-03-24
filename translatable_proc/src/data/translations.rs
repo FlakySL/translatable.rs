@@ -1,9 +1,13 @@
 use super::config::{SeekMode, load_config};
 use crate::languages::Iso639a;
-use std::collections::{HashMap, VecDeque};
+use std::clone;
+use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string};
 use std::sync::OnceLock;
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use strum::ParseError;
+use syn::LitStr;
 use thiserror::Error;
 use toml::{Table, Value};
 use crate::translations::errors::TranslationError;
@@ -23,14 +27,15 @@ pub enum TransformError {
     LanguageParsing(#[from] ParseError)
 }
 
+#[derive(Clone)]
 pub enum NestingType {
     Object(HashMap<String, NestingType>),
     Translation(HashMap<Iso639a, String>)
 }
 
 pub struct AssociatedTranslation {
-    pub original_path: String,
-    pub translation_table: NestingType
+    original_path: String,
+    translation_table: NestingType
 }
 
 /// Global cache for loaded translations
@@ -133,6 +138,41 @@ impl NestingType {
     }
 }
 
+impl Into<TokenStream> for NestingType {
+    fn into(self) -> TokenStream {
+        match self {
+            Self::Object(nesting) => {
+                let entries = nesting
+                    .into_iter()
+                    .map(|(key, value)| -> TokenStream {
+                        let key = LitStr::new(&key, Span::call_site());
+                        let value: TokenStream = value.into();
+                        quote! { (#key.to_string(), #value) }
+                    });
+
+                quote! {
+                    NestingType::Object(vec![#(#entries),*].into_iter().collect())
+                }
+            },
+
+            NestingType::Translation(translation) => {
+                let entries = translation
+                    .into_iter()
+                    .map(|(lang, value)| {
+                        let lang = LitStr::new(&lang.to_string(), Span::call_site());
+                        let value = LitStr::new(&value, Span::call_site());
+
+                        quote! { (#lang.to_string(), #value.to_string()) }
+                    });
+
+                quote! {
+                    NestingType::Translation(vec![#(#entries),*].into_iter().collect())
+                }
+            }
+        }
+    }
+}
+
 impl TryFrom<Table> for NestingType {
     type Error = TransformError;
 
@@ -191,5 +231,17 @@ impl TryFrom<Table> for NestingType {
             Some(result) => Ok(result),
             None => unreachable!()
         }
+    }
+}
+
+impl AssociatedTranslation {
+    #[allow(unused)]
+    pub fn original_path(&self) -> &str {
+        &self.original_path
+    }
+
+    #[allow(unused)]
+    pub fn translation_table(&self) -> &NestingType {
+        &self.translation_table
     }
 }
