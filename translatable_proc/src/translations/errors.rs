@@ -1,4 +1,7 @@
-use crate::{data::{config::ConfigError, translations::TransformError}, languages::Iso639a};
+use crate::{
+    data::{config::ConfigError, translations::TransformError},
+    languages::Iso639a,
+};
 use std::io::Error as IoError;
 use syn::Error as SynError;
 use thiserror::Error;
@@ -54,9 +57,7 @@ pub enum TranslationError {
     InvalidLanguage(String),
 
     /// Invalid TOML structure in specific file
-    #[error(
-        "Invalid TOML structure in file {1}: {0}"
-    )]
+    #[error("Invalid TOML structure in file {1}: {0}")]
     InvalidTomlFormat(TransformError, String),
 
     #[error("The path '{0}' is not found in any of the translation files.")]
@@ -66,5 +67,5 @@ pub enum TranslationError {
     LanguageNotAvailable(Iso639a, String),
 
     #[error("Error parsing macro.")]
-    MacroError(#[from] SynError)
+    MacroError(#[from] SynError),
 }

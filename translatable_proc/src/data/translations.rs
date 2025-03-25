@@ -137,10 +137,10 @@ impl NestingType {
     }
 }
 
-impl Into<TokenStream> for NestingType {
-    fn into(self) -> TokenStream {
-        match self {
-            Self::Object(nesting) => {
+impl From<NestingType> for TokenStream {
+    fn from(val: NestingType) -> Self {
+        match val {
+            NestingType::Object(nesting) => {
                 let entries = nesting
                     .into_iter()
                     .map(|(key, value)| -> TokenStream {

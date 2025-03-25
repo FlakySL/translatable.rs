@@ -1,9 +1,11 @@
+use crate::translations::generation::{
+    load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::token::Static;
 use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
-use crate::translations::generation::{load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static};
 
 /// Internal representation of macro arguments before processing
 ///
@@ -12,7 +14,7 @@ use crate::translations::generation::{load_lang_dynamic, load_lang_static, load_
 pub struct RawMacroArgs {
     /// Language specification (literal or expression)
     language: Expr,
-    /// Argument seprator.
+    /// Argument separator.
     _comma: Token![,],
     /// Static marker for path analysis
     static_marker: Option<Static>,
@@ -46,12 +48,12 @@ impl Parse for RawMacroArgs {
     }
 }
 
-impl Into<TranslationArgs> for RawMacroArgs {
-    fn into(self) -> TranslationArgs {
-        let is_path_static = self.static_marker.is_some();
+impl From<RawMacroArgs> for TranslationArgs {
+    fn from(val: RawMacroArgs) -> Self {
+        let is_path_static = val.static_marker.is_some();
 
         TranslationArgs {
-            language: match self.language {
+            language: match val.language {
                 Expr::Lit(ExprLit {
                     lit: Lit::Str(lit_str),
                     ..
@@ -59,17 +61,15 @@ impl Into<TranslationArgs> for RawMacroArgs {
                 other => LanguageType::OnScopeExpression(quote!(#other).into()),
             },
 
-            path: match self.path {
-                Expr::Path(ExprPath { path, .. }) if is_path_static => {
-                    PathType::CompileTimePath(
-                        path.segments
-                            .iter()
-                            .map(|s| s.ident.to_string())
-                            .collect::<Vec<_>>()
-                            .join(".")
-                            .to_string(),
-                    )
-                }
+            path: match val.path {
+                Expr::Path(ExprPath { path, .. }) if is_path_static => PathType::CompileTimePath(
+                    path.segments
+                        .iter()
+                        .map(|s| s.ident.to_string())
+                        .collect::<Vec<_>>()
+                        .join(".")
+                        .to_string(),
+                ),
 
                 path => PathType::OnScopeExpression(quote!(#path).into()),
             },
@@ -87,7 +87,7 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
                 Ok(lang) => Some(lang),
                 Err(e) => {
                     let e = format!("{e:#}");
-                    return quote! { compile_error!(#e) }
+                    return quote! { compile_error!(#e) };
                 }
             },
         ),
@@ -100,26 +100,23 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
     };
 
     match (lang_expr, translation_expr) {
-        (Some(lang), Ok(trans)) => {
-            match lang {
-                Ok(lang) => {
-                    quote! {{
-                        #lang
-                        #trans
-                    }}
-                },
+        (Some(lang), Ok(trans)) => match lang {
+            Ok(lang) => {
+                quote! {{
+                    #lang
+                    #trans
+                }}
+            }
 
-                Err(e) => {
-                    let e = format!("{e:#}");
-                    quote! { compile_error!{#e} }
-                }
+            Err(e) => {
+                let e = format!("{e:#}");
+                quote! { compile_error!{#e} }
             }
         },
         (None, Ok(trans)) => trans,
         (_, Err(e)) => {
             let e = format!("{e:#}");
             quote! { compile_error!(#e) }
-        },
+        }
     }
-        .into()
 }
