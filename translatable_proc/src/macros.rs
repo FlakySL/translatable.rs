@@ -58,7 +58,7 @@ impl From<RawMacroArgs> for TranslationArgs {
                     lit: Lit::Str(lit_str),
                     ..
                 }) => LanguageType::CompileTimeLiteral(lit_str.value()),
-                other => LanguageType::OnScopeExpression(quote!(#other).into()),
+                other => LanguageType::OnScopeExpression(quote!(#other)),
             },
 
             path: match val.path {
@@ -71,7 +71,7 @@ impl From<RawMacroArgs> for TranslationArgs {
                         .to_string(),
                 ),
 
-                path => PathType::OnScopeExpression(quote!(#path).into()),
+                path => PathType::OnScopeExpression(quote!(#path)),
             },
         }
     }
