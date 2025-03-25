@@ -30,7 +30,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
         .map(|language| {
             let language = format!("{language:?}");
 
-            quote! { stringify!(#language), }
+            quote! { #language, }
         });
 
     // The `String` explicit type serves as
@@ -38,9 +38,12 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
     // for any expression that's not static.
     Ok(
         quote! {
+            #[doc(hidden)]
             let language: String = (#lang).into();
+            #[doc(hidden)]
             let language = language.to_lowercase();
 
+            #[doc(hidden)]
             let valid_lang = vec![#(#available_langs)*]
                 .iter()
                 .any(|lang| lang.eq_ignore_ascii_case(&language));
@@ -69,7 +72,7 @@ pub fn load_translation_static(static_lang: Option<Iso639a>, path: String) -> Re
                     .get(&language)
                     .ok_or(TranslationError::LanguageNotAvailable(language, path))?;
 
-                quote! { stringify!(#translation) }
+                quote! { #translation }
             },
 
             None => {
@@ -77,20 +80,22 @@ pub fn load_translation_static(static_lang: Option<Iso639a>, path: String) -> Re
                     .iter()
                     .map(|(key, value)| {
                         let key = format!("{key:?}").to_lowercase();
-                        quote! { (stringify!(#key), stringify!(#value)) }
+                        quote! { (#key, #value) }
                     });
 
-                quote! {
+                quote! {{
                     if valid_lang {
                         vec![#(#translation_object),*]
-                            .iter()
+                            .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
-                            .get(&language)
-                            .ok_or(translatable::Error::LanguageNotAvailable(language, stringify!(#path).to_string()))
+                            .get(language.as_str())
+                            .ok_or(translatable::Error::LanguageNotAvailable(language, #path.to_string()))
+                            .cloned()
+                            .map(|translation| translation.to_string())
                     } else {
                         Err(translatable::Error::InvalidLanguage(language))
                     }
-                }
+                }}
             }
         }
     )
@@ -109,10 +114,12 @@ pub fn load_translation_dynamic(static_lang: Option<Iso639a>, path: TokenStream)
     let translation_quote = quote! {
         let path: String = #path.into();
 
-        let translation = vec![#(#nestings),*]
+        let nested_translations = vec![#(#nestings),*];
+        let translation = nested_translations
+            .iter()
             .find_map(|nesting| nesting
                 .get_path(
-                    stringify!(path)
+                    path
                         .split(".")
                         .collect()
                 )
@@ -121,29 +128,31 @@ pub fn load_translation_dynamic(static_lang: Option<Iso639a>, path: TokenStream)
 
     Ok(match static_lang {
         Some(language) => {
-            let language = format!("{language:?}");
+            let language = format!("{language:?}").to_lowercase();
 
-            quote! {
+            quote! {{
                 #translation_quote
 
                 translation
-                    .and_then(|translation| translation.get(stringify!(#language)))
-                    .ok_or(translatable::Error::LanguageNotAvailable(stringify!(#language).to_string(), path))
-            }
+                    .and_then(|translation| translation.get(#language))
+                    .ok_or(translatable::Error::LanguageNotAvailable(#language.to_string(), path))
+                    .cloned()
+            }}
         },
 
         None => {
-            quote! {
+            quote! {{
                 #translation_quote
 
                 if valid_lang {
                     translation
                         .and_then(|translation| translation.get(&language))
                         .ok_or(translatable::Error::LanguageNotAvailable(language, path))
+                        .cloned()
                 } else {
                     Err(translatable::Error::InvalidLanguage(language))
                 }
-            }
+            }}
         }
     })
 }

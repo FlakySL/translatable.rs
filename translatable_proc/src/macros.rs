@@ -97,10 +97,10 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
         (Some(lang), Ok(trans)) => {
             match lang {
                 Ok(lang) => {
-                    quote! {
+                    quote! {{
                         #lang
                         #trans
-                    }
+                    }}
                 },
 
                 Err(e) => {

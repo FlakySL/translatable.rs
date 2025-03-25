@@ -158,7 +158,7 @@ impl Into<TokenStream> for NestingType {
                 let entries = translation
                     .into_iter()
                     .map(|(lang, value)| {
-                        let lang = LitStr::new(&lang.to_string(), Span::call_site());
+                        let lang = LitStr::new(&format!("{lang:?}").to_lowercase(), Span::call_site());
                         let value = LitStr::new(&value, Span::call_site());
 
                         quote! { (#lang.to_string(), #value.to_string()) }
