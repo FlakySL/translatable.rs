@@ -377,12 +377,44 @@ pub enum Iso639a {
     ZU,
 }
 
+pub struct Similarities<T: Sized> {
+    overflow_by: usize,
+    similarities: Vec<T>
+}
+
+impl<T: Sized> Similarities<T> {
+    pub fn overflow_by(&self) -> usize {
+        self.overflow_by
+    }
+
+    pub fn similarities(&self) -> &[T] {
+        &self.similarities
+    }
+}
+
 impl Iso639a {
-    pub fn get_similarities(lang: &str) -> Vec<String> {
-        Self::iter()
+    pub fn get_similarities(lang: &str, max_amount: usize) -> Similarities<String> {
+        let all_similarities = Self::iter()
             .map(|variant| format!("{variant:#} ({variant:?})"))
             .filter(|variant| variant.contains(lang))
-            .collect()
+            .collect::<Vec<_>>();
+
+        let overflow_by = all_similarities.len() as i32 - max_amount as i32;
+
+        if overflow_by > 0 {
+            Similarities {
+                similarities: all_similarities
+                .into_iter()
+                .take(max_amount)
+                .collect(),
+                overflow_by: overflow_by as usize
+            }
+        } else {
+            Similarities {
+                similarities: all_similarities,
+                overflow_by: 0
+            }
+        }
     }
 }
 

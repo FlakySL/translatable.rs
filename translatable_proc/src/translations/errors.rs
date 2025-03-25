@@ -33,13 +33,21 @@ pub enum TranslationError {
     #[error(
         "'{0}' is not valid ISO 639-1. {similarities}",
         similarities = {
-            let similarities = Iso639a::get_similarities(.0)
+            let similarities = Iso639a::get_similarities(.0, 10);
+            let similarities_format = similarities
+                .similarities()
                 .join("\n");
 
-            if similarities.is_empty() {
+            if similarities_format.is_empty() {
                 "".into()
             } else {
-                format!("These are some valid languages including '{}':\n{similarities}", .0)
+                let including_format = format!("These are some valid languages including '{}':\n{similarities_format}", .0);
+
+                if similarities.overflow_by() > 0 {
+                    format!("{including_format}\n... and {} more.", similarities.overflow_by())
+                } else {
+                    including_format
+                }
             }
         }
     )]
