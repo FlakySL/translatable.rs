@@ -1,10 +1,9 @@
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::token::Static;
 use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
-
-use crate::translations::generation::load_translation_static;
+use crate::translations::generation::{load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static};
 
 /// Internal representation of macro arguments before processing
 ///
@@ -21,25 +20,8 @@ pub struct RawMacroArgs {
     path: Expr,
 }
 
-/// A TranslationPathType is a wrapper to the path
-/// argument, this provides feedback on how to
-/// interact with the user provided path.
 pub enum PathType {
-    /// An OnScopeExpression represents
-    /// any expresion that evaluates to
-    /// a string, that expression is dynamic
-    /// and it's evaluated on runtime, so
-    /// the means to generate checks and errors
-    /// are limited.
     OnScopeExpression(TokenStream),
-
-    /// A CompileTimePath represents a path
-    /// that's prefixed with the `static`
-    /// keyword, if the passed expression is
-    /// this one we read the translations
-    /// directly, if a translation for that
-    /// path does not exist, a compile time
-    /// error is generated.
     CompileTimePath(String),
 }
 
@@ -61,24 +43,6 @@ impl Parse for RawMacroArgs {
             static_marker: input.parse()?,
             path: input.parse()?,
         })
-    }
-}
-
-impl PathType {
-    pub fn dynamic(self) -> TokenStream {
-        match self {
-            Self::OnScopeExpression(tokens) => tokens,
-            Self::CompileTimePath(cmp_val) => quote!(#cmp_val).into(),
-        }
-    }
-}
-
-impl LanguageType {
-    pub fn dynamic(self) -> TokenStream {
-        match self {
-            Self::OnScopeExpression(tokens) => tokens,
-            Self::CompileTimeLiteral(cmp_val) => quote!(#cmp_val).into(),
-        }
     }
 }
 
@@ -113,10 +77,43 @@ impl Into<TranslationArgs> for RawMacroArgs {
     }
 }
 
-pub fn translation_macro(_args: TranslationArgs) -> TokenStream {
-    if let PathType::CompileTimePath(path) = _args.path {
-        load_translation_static(None, path);
-    }
+pub fn translation_macro(args: TranslationArgs) -> TokenStream {
+    let TranslationArgs { language, path } = args;
 
-    quote!("").into()
+    let (lang_expr, static_lang) = match language {
+        LanguageType::CompileTimeLiteral(lang) => (
+            None,
+            Some(load_lang_static(&lang).ok()).flatten(),
+        ),
+        LanguageType::OnScopeExpression(lang) => (Some(load_lang_dynamic(lang)), None),
+    };
+
+    let translation_expr = match path {
+        PathType::CompileTimePath(p) => load_translation_static(static_lang, p),
+        PathType::OnScopeExpression(p) => load_translation_dynamic(static_lang, p),
+    };
+
+    match (lang_expr, translation_expr) {
+        (Some(lang), Ok(trans)) => {
+            match lang {
+                Ok(lang) => {
+                    quote! {
+                        #lang
+                        #trans
+                    }
+                },
+
+                Err(e) => {
+                    let e = format!("{e:#}");
+                    quote! { compile_error!{#e} }
+                }
+            }
+        },
+        (None, Ok(trans)) => trans,
+        (_, Err(e)) => {
+            let e = format!("{e:#}");
+            quote! { compile_error!(#e) }
+        },
+    }
+        .into()
 }

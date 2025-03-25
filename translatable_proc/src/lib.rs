@@ -27,5 +27,5 @@ mod translations;
 /// - Translation path (supports static analysis)
 #[proc_macro]
 pub fn translation(input: TokenStream) -> TokenStream {
-    translation_macro(parse_macro_input!(input as RawMacroArgs).into())
+    translation_macro(parse_macro_input!(input as RawMacroArgs).into()).into()
 }
