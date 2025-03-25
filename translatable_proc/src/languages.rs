@@ -380,7 +380,7 @@ pub enum Iso639a {
 impl Iso639a {
     pub fn get_similarities(lang: &str) -> Vec<String> {
         Self::iter()
-            .map(|variant| variant.to_string())
+            .map(|variant| format!("{variant:#} ({variant:?})"))
             .filter(|variant| variant.contains(lang))
             .collect()
     }

@@ -83,7 +83,13 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
     let (lang_expr, static_lang) = match language {
         LanguageType::CompileTimeLiteral(lang) => (
             None,
-            Some(load_lang_static(&lang).ok()).flatten(),
+            match load_lang_static(&lang) {
+                Ok(lang) => Some(lang),
+                Err(e) => {
+                    let e = format!("{e:#}");
+                    return quote! { compile_error!(#e) }
+                }
+            },
         ),
         LanguageType::OnScopeExpression(lang) => (Some(load_lang_dynamic(lang)), None),
     };

@@ -13,10 +13,7 @@ pub fn load_lang_static(lang: &str) -> Result<Iso639a, TranslationError> {
     Ok(
         lang
             .parse::<Iso639a>()
-            .map_err(|_| TranslationError::InvalidLanguage(
-                lang.to_string(),
-                Iso639a::get_similarities(lang)
-            ))?
+            .map_err(|_| TranslationError::InvalidLanguage(lang.to_string()))?
     )
 }
 

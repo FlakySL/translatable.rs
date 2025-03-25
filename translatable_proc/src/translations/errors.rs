@@ -31,10 +31,19 @@ pub enum TranslationError {
 
     /// Invalid language code error with suggestions
     #[error(
-        "'{0}' is not valid ISO 639-1. These are some valid languages including '{0}':\n{sorted_list}",
-        sorted_list = .1.join(",\n")
+        "'{0}' is not valid ISO 639-1. {similarities}",
+        similarities = {
+            let similarities = Iso639a::get_similarities(.0)
+                .join("\n");
+
+            if similarities.is_empty() {
+                "".into()
+            } else {
+                format!("These are some valid languages including '{}':\n{similarities}", .0)
+            }
+        }
     )]
-    InvalidLanguage(String, Vec<String>),
+    InvalidLanguage(String),
 
     /// Invalid TOML structure in specific file
     #[error(
