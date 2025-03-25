@@ -36,4 +36,26 @@ pub mod internal {
         Object(HashMap<String, NestingType>),
         Translation(HashMap<String, String>)
     }
+
+    impl NestingType {
+        pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<String, String>> {
+            match self {
+                Self::Object(nested) => {
+                    let (first, rest) = path.split_first()?;
+
+                    nested
+                        .get(*first)
+                        .and_then(|n| n.get_path(rest.to_vec()))
+                },
+
+                Self::Translation(translation) => {
+                    if path.is_empty() {
+                        return Some(translation)
+                    }
+
+                    None
+                }
+            }
+        }
+    }
 }

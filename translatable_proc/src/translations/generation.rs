@@ -18,7 +18,6 @@ pub fn load_lang_static(lang: &str) -> Result<Iso639a, TranslationError> {
                 Iso639a::get_similarities(lang)
             ))?
     )
-
 }
 
 /// This function generates a language variable, the only
@@ -98,7 +97,7 @@ pub fn load_translation_static(static_lang: Option<Iso639a>, path: String) -> Re
 }
 
 pub fn load_translation_dynamic(static_lang: Option<Iso639a>, path: TokenStream) -> Result<TokenStream, TranslationError> {
-    let translation = load_translations()?
+    let nestings = load_translations()?
         .into_iter()
         .map(|association| association
             .translation_table()
@@ -107,6 +106,45 @@ pub fn load_translation_dynamic(static_lang: Option<Iso639a>, path: TokenStream)
         )
         .collect::<Vec<TokenStream>>();
 
-    Ok(quote! {})
+    let translation_quote = quote! {
+        let path: String = #path.into();
+
+        let translation = vec![#(#nestings),*]
+            .find_map(|nesting| nesting
+                .get_path(
+                    stringify!(path)
+                        .split(".")
+                        .collect()
+                )
+            );
+    };
+
+    Ok(match static_lang {
+        Some(language) => {
+            let language = format!("{language:?}");
+
+            quote! {
+                #translation_quote
+
+                translation
+                    .and_then(|translation| translation.get(stringify!(#language)))
+                    .ok_or(translatable::Error::LanguageNotAvailable(stringify!(#language).to_string(), path))
+            }
+        },
+
+        None => {
+            quote! {
+                #translation_quote
+
+                if valid_lang {
+                    translation
+                        .and_then(|translation| translation.get(&language))
+                        .ok_or(translatable::Error::LanguageNotAvailable(language, path))
+                } else {
+                    Err(translatable::Error::InvalidLanguage(language))
+                }
+            }
+        }
+    })
 }
 

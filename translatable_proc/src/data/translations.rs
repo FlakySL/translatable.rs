@@ -1,6 +1,5 @@
 use super::config::{SeekMode, load_config};
 use crate::languages::Iso639a;
-use std::clone;
 use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string};
 use std::sync::OnceLock;
