@@ -77,12 +77,12 @@ syntax `static path::to::translation`.
 Depending on whether the parameters are static or dynamic the macro will act different, differing whether
 the checks are compile-time or run-time, the following table is a macro behavior matrix.
 
-| Parameters                                         | Compile-Time checks                                    | Return type                             |
-|----------------------------------------------------|--------------------------------------------------------|-----------------------------------------|
-| `static language` + `static path` (most optimized) | Path existence, Language validity, \*Template validation | &'static str (stack)                    |
-| `dynamic language` + `dynamic path`                | None                                                   | Result<String, TranslationError> (heap) |
-| `static language` + `dynamic path`                 | Language validity                                      | Result<String, TranslationError> (heap) |
-| `dynamic language` + `static path` (commonly used) | Path existence, \*Template validation                    | Result<String, TranslationError> (heap) |
+| Parameters                                         | Compile-Time checks                                      | Return type                                                                       |
+|----------------------------------------------------|----------------------------------------------------------|-----------------------------------------------------------------------------------|
+| `static language` + `static path` (most optimized) | Path existence, Language validity, \*Template validation | `&'static str` (stack) if there are no templates or `String` (heap) if there are. |
+| `dynamic language` + `dynamic path`                | None                                                     | `Result<String, TranslatableError>` (heap)                                        |
+| `static language` + `dynamic path`                 | Language validity                                        | `Result<String, TranslatableError>` (heap)                                        |
+| `dynamic language` + `static path` (commonly used) | Path existence, \*Template validation                    | `Result<String, TranslatableError>` (heap)                                        |
 
 - For the error handling, if you want to integrate this with `thiserror` you can use a `#[from] translatable::TranslationError`,
 as a nested error, all the errors implement display, for optimization purposes there are not the same amount of errors with
