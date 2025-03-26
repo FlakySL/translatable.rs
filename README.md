@@ -10,7 +10,6 @@ A robust internationalization solution for Rust featuring compile-time validatio
 - [Features](#features-)
 - [Installation](#installation-)
 - [Usage](#usage-)
-- [Configuration](#configuration-)
 - [Example implementation](#example-implementation-)
 
 ## Features 🚀
