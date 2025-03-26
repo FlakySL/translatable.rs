@@ -118,17 +118,13 @@ project-root/
 Notice how `common.greeting` has a template named `name`.
 
 ```toml
-[home]
-welcome_message = {
-    en = "Welcome to our app!",
-    es = "¡Bienvenido a nuestra aplicación!"
-}
+[welcome_message]
+en = "Welcome to our app!"
+es = "¡Bienvenido a nuestra aplicación!"
 
-[common]
-greeting = {
-    en = "Hello {name}!",
-    es = "¡Hola {name}!"
-}
+[common.greeting]
+en = "Hello {name}!"
+es = "¡Hola {name}!"
 ```
 
 ### Example application usage
