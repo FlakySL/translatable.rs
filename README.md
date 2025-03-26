@@ -42,7 +42,7 @@ configuration values.
 |-----------|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | `path`      | `String`                             | Where the translation files will be stored, non translation files in that folder will cause errors.                            |
 | `seek_mode` | `"alphabetical"` \| `"unalphabetical"` | The found translations are ordered by file name, based on this field.                                                          |
-| `overlap`   | `"overwrite"` \| `"ignore"`            | Orderly if a translation is found "overwrite" will keep searching for translations and "ignore" will preserve the current one. |
+| `overlap`   | `"overwrite"` \| `"ignore"`            | Orderly if a translation is found `"overwrite"` will keep searching for translations and `"ignore"` will preserve the current one. |
 
 `seek_mode` and `overlap` only reverse the translations as convenient, this way the process
 doesn't get repeated every time a translation is loaded.
@@ -110,7 +110,7 @@ project-root/
 ├── translations/
 │    └── app.toml
 └── src/
-	 └── main.rs
+     └── main.rs
 ```
 
 ### Example translation file (translations/app.toml)
