@@ -26,6 +26,16 @@ pub enum Error {
     LanguageNotAvailable(String, String)
 }
 
+impl Error {
+    /// This method is a convenience implementation
+    /// to obtain the `Display` from each error.
+    #[inline]
+    #[cold]
+    pub fn cause(&self) -> String {
+        format!("{self:#}")
+    }
+}
+
 /// This module is for internal usage, it's members
 /// are not documented, and there is no support on
 /// using it.
