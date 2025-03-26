@@ -121,10 +121,14 @@ pub fn load_translation_dynamic(
             quote! {{
                 #translation_quote
 
-                translation
-                    .and_then(|translation| translation.get(#language))
-                    .ok_or(translatable::Error::LanguageNotAvailable(#language.to_string(), path))
-                    .cloned()
+                if let Some(translation) = translation {
+                    translation
+                        .get(#language)
+                        .ok_or(translatable::Error::LanguageNotAvailable(#language.to_string(), path))
+                        .cloned()
+                } else {
+                    Err(translatable::Error::PathNotFound(path))
+                }
             }}
         }
 
@@ -133,10 +137,14 @@ pub fn load_translation_dynamic(
                 #translation_quote
 
                 if valid_lang {
-                    translation
-                        .and_then(|translation| translation.get(&language))
-                        .ok_or(translatable::Error::LanguageNotAvailable(language, path))
-                        .cloned()
+                    if let Some(translation) = translation {
+                        translation
+                            .get(&language)
+                            .ok_or(translatable::Error::LanguageNotAvailable(language, path))
+                            .cloned()
+                    } else {
+                        Err(translatable::Error::PathNotFound(path))
+                    }
                 } else {
                     Err(translatable::Error::InvalidLanguage(language))
                 }

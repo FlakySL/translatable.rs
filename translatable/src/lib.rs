@@ -23,7 +23,10 @@ pub enum Error {
     InvalidLanguage(String),
 
     #[error("The langauge '{0}' is not available for the path '{1}'")]
-    LanguageNotAvailable(String, String)
+    LanguageNotAvailable(String, String),
+
+    #[error("The path '{0}' was not found in any of the translations files.")]
+    PathNotFound(String)
 }
 
 impl Error {
