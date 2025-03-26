@@ -36,9 +36,6 @@ impl Error {
     }
 }
 
-/// This module is for internal usage, it's members
-/// are not documented, and there is no support on
-/// using it.
 #[doc(hidden)]
 pub mod internal {
     use std::collections::HashMap;
