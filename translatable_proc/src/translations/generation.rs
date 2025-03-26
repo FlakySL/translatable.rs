@@ -97,9 +97,12 @@ pub fn load_translation_dynamic(
         .collect::<Vec<TokenStream>>();
 
     let translation_quote = quote! {
+        #[doc(hidden)]
         let path: String = #path.into();
 
+        #[doc(hidden)]
         let nested_translations = vec![#(#nestings),*];
+        #[doc(hidden)]
         let translation = nested_translations
             .iter()
             .find_map(|nesting| nesting

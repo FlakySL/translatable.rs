@@ -29,14 +29,17 @@ pub enum Error {
 /// This module is for internal usage, it's members
 /// are not documented, and there is no support on
 /// using it.
+#[doc(hidden)]
 pub mod internal {
     use std::collections::HashMap;
 
+    #[doc(hidden)]
     pub enum NestingType {
         Object(HashMap<String, NestingType>),
         Translation(HashMap<String, String>)
     }
 
+    #[doc(hidden)]
     impl NestingType {
         pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<String, String>> {
             match self {
