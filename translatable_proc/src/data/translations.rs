@@ -1,4 +1,4 @@
-use super::config::{SeekMode, load_config};
+use super::config::{load_config, SeekMode, TranslationOverlap};
 use crate::languages::Iso639a;
 use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string};
@@ -97,7 +97,7 @@ pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, Transl
         translation_paths.reverse();
     }
 
-    let translations = translation_paths
+    let mut translations = translation_paths
         .iter()
         .map(|path| {
             let table = read_to_string(path)?
@@ -111,6 +111,10 @@ pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, Transl
             })
         })
         .collect::<Result<Vec<_>, TranslationError>>()?;
+
+    if let TranslationOverlap::Overwrite = config.overlap() {
+        translations.reverse();
+    }
 
     Ok(TRANSLATIONS.get_or_init(|| translations))
 }
