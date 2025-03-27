@@ -14,10 +14,20 @@ fn kwarg_dynamic_replaces(format_kwargs: HashMap<String, TokenStream>) -> Vec<To
         .iter()
         .map(|(key, value)|
             quote! {
-                .map(|translation| translation.replace(
-                    format!("{{{}}}", #key).as_str(),
-                    format!("{:#}", #value).as_str()
-                ))
+                .map(|translation| translation
+                    .replace(
+                        format!("{{{{{}}}}}", #key).as_str(), // Replace {{key}} -> a temporary placeholder
+                        format!("\x01{{{}}}\x01", #key).as_str()
+                    )
+                    .replace(
+                        format!("{{{}}}", #key).as_str(), // Replace {key} -> value
+                        format!("{:#}", #value).as_str()
+                    )
+                    .replace(
+                        format!("\x01{{{}}}\x01", #key).as_str(), // Restore {key} from the placeholder
+                        format!("{{{}}}", #key).as_str()
+                    )
+                )
             }
         )
         .collect::<Vec<_>>()
