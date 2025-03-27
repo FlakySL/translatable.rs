@@ -81,14 +81,15 @@ The rest of parameters are `meta-variable patterns` also known as `key = value` 
 these are processed as replaces, *or format if the call is all-static*. When a template (`{}`) is found with
 the name of a key inside it gets replaced for whatever is the `Display` implementation of the value. This meaning
 that the value must always implement `Display`. Otherwise, if you want to have a `{}` inside your translation,
-you can escape it the same way `format!` does, by using `{{}}`.
+you can escape it the same way `format!` does, by using `{{}}`. Just like object construction works in rust, if
+you have a parameter like `x = x`, you can shorten it to `x`.
 
 Depending on whether the parameters are static or dynamic the macro will act different, differing whether
 the checks are compile-time or run-time, the following table is a macro behavior matrix.
 
 | Parameters                                         | Compile-Time checks                                      | Return type                                                                       |
 |----------------------------------------------------|----------------------------------------------------------|-----------------------------------------------------------------------------------|
-| `static language` + `static path` (most optimized) | Path existence, Language validity, \*Template validation | `&'static str` (stack) if there are no templates or `String` (heap) if there are. |
+| `static language` + `static path` (most optimized) | Path existence, Language validity                        | `&'static str` (stack) if there are no templates or `String` (heap) if there are. |
 | `dynamic language` + `dynamic path`                | None                                                     | `Result<String, TranslatableError>` (heap)                                        |
 | `static language` + `dynamic path`                 | Language validity                                        | `Result<String, TranslatableError>` (heap)                                        |
 | `dynamic language` + `static path` (commonly used) | Path existence                                           | `Result<String, TranslatableError>` (heap)                                        |
@@ -99,12 +100,6 @@ dynamic parameters than there are with static parameters.
 
 - The runtime errors implement a `cause()` method that returns a heap allocated `String` with the error reason, essentially
 the error display.
-
-- Template validation in static parameter handling means purely variable existence, an all-static invocation
-generates a quoted translation (`""`), essentially the same value you can find in your translation file, so if the
-invocation is all-static the macro will generate a `format!` call, which implicitly validates the variable
-existence, if the variable is found outer scope the macro may use that. In the case where any of the
-parameters is dynamic, the macro will return an error if some replacement couldn't be found.
 
 ## Example implementation 📂
 

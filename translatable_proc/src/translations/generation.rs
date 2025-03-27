@@ -3,33 +3,40 @@ use std::collections::HashMap;
 use proc_macro2::TokenStream;
 use quote::quote;
 use strum::IntoEnumIterator;
-use syn::{parse2, parse_str, Error as SynError, Expr, Ident};
+use syn::{parse2, Expr};
 
 use super::errors::TranslationError;
 use crate::data::translations::load_translations;
 use crate::languages::Iso639a;
 
-fn kwarg_dynamic_replaces(format_kwargs: HashMap<String, TokenStream>) -> Vec<TokenStream> {
+fn kwarg_static_replaces(key: &str, value: &TokenStream) -> TokenStream {
+    quote! {
+        .replace(
+            format!("{{{{{}}}}}", #key).as_str(), // Replace {{key}} -> a temporary placeholder
+            format!("\x01{{{}}}\x01", #key).as_str()
+        )
+        .replace(
+            format!("{{{}}}", #key).as_str(), // Replace {key} -> value
+            format!("{:#}", #value).as_str()
+        )
+        .replace(
+            format!("\x01{{{}}}\x01", #key).as_str(), // Restore {key} from the placeholder
+            format!("{{{}}}", #key).as_str()
+        )
+    }
+}
+
+fn kwarg_dynamic_replaces(format_kwargs: &HashMap<String, TokenStream>) -> Vec<TokenStream> {
     format_kwargs
         .iter()
-        .map(|(key, value)|
+        .map(|(key, value)| {
+            let static_replaces = kwarg_static_replaces(key, value);
             quote! {
                 .map(|translation| translation
-                    .replace(
-                        format!("{{{{{}}}}}", #key).as_str(), // Replace {{key}} -> a temporary placeholder
-                        format!("\x01{{{}}}\x01", #key).as_str()
-                    )
-                    .replace(
-                        format!("{{{}}}", #key).as_str(), // Replace {key} -> value
-                        format!("{:#}", #value).as_str()
-                    )
-                    .replace(
-                        format!("\x01{{{}}}\x01", #key).as_str(), // Restore {key} from the placeholder
-                        format!("{{{}}}", #key).as_str()
-                    )
+                    #static_replaces
                 )
             }
-        )
+        })
         .collect::<Vec<_>>()
 }
 
@@ -97,6 +104,7 @@ pub fn load_translation_static(
         .iter()
         .find_map(|association| association.translation_table().get_path(path.split('.').collect()))
         .ok_or(TranslationError::PathNotFound(path.to_string()))?;
+    let replaces = kwarg_dynamic_replaces(&format_kwargs);
 
     Ok(match static_lang {
         Some(language) => {
@@ -104,26 +112,15 @@ pub fn load_translation_static(
                 .get(&language)
                 .ok_or(TranslationError::LanguageNotAvailable(language, path))?;
 
-            if format_kwargs.is_empty() {
-                quote! { #translation }
-            } else {
-                let format_kwargs = format_kwargs
-                    .iter()
-                    .map(|(key, value)| {
-                        let key: Ident = parse_str(&key)?;
-                        Ok::<TokenStream, SynError>(quote! {
-                            #[doc(hidden)]
-                            let #key = #value;
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
+            let static_replaces = format_kwargs
+                .iter()
+                .map(|(key, value)| kwarg_static_replaces(key, value))
+                .collect::<Vec<_>>();
 
-                quote! {{
-                    #(#format_kwargs)*
-
-                    format!(#translation)
-                }}
-            }
+            quote! {{
+                #translation
+                #(#static_replaces)*
+            }}
         },
 
         None => {
@@ -131,7 +128,6 @@ pub fn load_translation_static(
                 let key = format!("{key:?}").to_lowercase();
                 quote! { (#key, #value) }
             });
-            let replaces = kwarg_dynamic_replaces(format_kwargs);
 
             quote! {{
                 if valid_lang {
@@ -186,7 +182,7 @@ pub fn load_translation_dynamic(
             ));
     };
 
-    let replaces = kwarg_dynamic_replaces(format_kwargs);
+    let replaces = kwarg_dynamic_replaces(&format_kwargs);
 
     Ok(match static_lang {
         Some(language) => {
