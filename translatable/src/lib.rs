@@ -48,7 +48,6 @@ pub mod internal {
         Translation(HashMap<String, String>),
     }
 
-    #[doc(hidden)]
     impl NestingType {
         /// Resolves a translation path through nested structures
         ///
@@ -58,6 +57,7 @@ pub mod internal {
         /// # Returns
         /// - `Some(&HashMap)` if path resolves to translations
         /// - `None` if path is invalid
+        #[doc(hidden)]
         pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<String, String>> {
             match self {
                 Self::Object(nested) => {
