@@ -1,0 +1,11 @@
+[package]
+name = "translatable"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0.12"
+translatable_proc = { path = "../translatable_proc" }
+
+[dev-dependencies]
+trybuild = "1.0.104"

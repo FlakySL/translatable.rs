@@ -1,4 +1,5 @@
-//! Internationalization library providing compile-time and runtime translation facilities
+//! Internationalization library providing compile-time and runtime translation
+//! facilities
 //!
 //! # Features
 //! - TOML-based translation files
@@ -6,11 +7,11 @@
 //! - Configurable loading strategies
 //! - Procedural macro for compile-time checking
 
-use macros::{RawTranslationArgs, translation_macro};
+use macros::{RawMacroArgs, translation_macro};
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
-mod config;
+mod data;
 mod languages;
 mod macros;
 mod translations;
@@ -27,5 +28,5 @@ mod translations;
 /// - Translation path (supports static analysis)
 #[proc_macro]
 pub fn translation(input: TokenStream) -> TokenStream {
-    translation_macro(parse_macro_input!(input as RawTranslationArgs).into())
+    translation_macro(parse_macro_input!(input as RawMacroArgs).into()).into()
 }

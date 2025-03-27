@@ -1,5 +1,4 @@
-use std::str::FromStr;
-use strum::{Display, EnumIter, EnumString};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 /// ISO 639-1 language code implementation with validation
 ///
@@ -7,7 +6,7 @@ use strum::{Display, EnumIter, EnumString};
 /// - Case-insensitive parsing
 /// - Strict validation
 /// - Complete ISO 639-1 coverage
-#[derive(Debug, EnumIter, Display, EnumString)]
+#[derive(Debug, Clone, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
 #[strum(ascii_case_insensitive)]
 pub enum Iso639a {
     #[strum(serialize = "Abkhazian", serialize = "ab")]
@@ -378,19 +377,50 @@ pub enum Iso639a {
     ZU,
 }
 
+/// This struct represents a list of similar languages to the provided one.
+pub struct Similarities<T: Sized> {
+    /// Indicates how many languages are not included in the list.
+    overflow_by: usize,
+    /// List of similar languages.
+    similarities: Vec<T>,
+}
+
+impl<T: Sized> Similarities<T> {
+    pub fn overflow_by(&self) -> usize {
+        self.overflow_by
+    }
+
+    pub fn similarities(&self) -> &[T] {
+        &self.similarities
+    }
+}
+
 impl Iso639a {
-    /// Validates if a string represents a valid ISO 639-1 language
-    ///
-    /// # Arguments
-    /// * `lang` - Input string to validate (case-insensitive)
-    ///
-    /// # Examples
-    /// ```ignore
-    /// assert!(Iso639a::is_valid("en"));
-    /// assert!(Iso639a::is_valid("English"));
-    /// assert!(!Iso639a::is_valid("xx"));
-    /// ```
-    pub fn is_valid(lang: &str) -> bool {
-        Iso639a::from_str(lang).is_ok()
+    /// This method returns a list of similar languages to the provided one.
+    pub fn get_similarities(lang: &str, max_amount: usize) -> Similarities<String> {
+        let all_similarities = Self::iter()
+            .map(|variant| format!("{variant:#} ({variant:?})"))
+            .filter(|variant| variant.contains(lang))
+            .collect::<Vec<_>>();
+
+        let overflow_by = all_similarities.len() as i32 - max_amount as i32;
+
+        if overflow_by > 0 {
+            Similarities {
+                similarities: all_similarities.into_iter().take(max_amount).collect(),
+                overflow_by: overflow_by as usize,
+            }
+        } else {
+            Similarities {
+                similarities: all_similarities,
+                overflow_by: 0,
+            }
+        }
+    }
+}
+
+impl PartialEq<String> for Iso639a {
+    fn eq(&self, other: &String) -> bool {
+        format!("{self:?}").to_lowercase() == other.to_lowercase()
     }
 }

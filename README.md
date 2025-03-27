@@ -1,19 +1,16 @@
-# Translatable
+# Translatable 🌐🗣️💬🌍
 
 [![Crates.io](https://img.shields.io/crates/v/translatable)](https://crates.io/crates/translatable)
 [![Docs.rs](https://docs.rs/translatable/badge.svg)](https://docs.rs/translatable)
 
 A robust internationalization solution for Rust featuring compile-time validation, ISO 639-1 compliance, and TOML-based translation management.
 
-## Table of Contents
+## Table of Contents 📖
 
-- [Features](#features-🚀)
-- [Installation](#installation-📦)
-- [Usage](#usage-🛠️)
-- [Configuration](#configuration-⚙️)
-- [Error Handling](#error-handling-🚨)
-- [Example Structure](#example-structure-📂)
-- [Integration Guide](#integration-guide-🔗)
+- [Features](#features-)
+- [Installation](#installation-)
+- [Usage](#usage-)
+- [Example implementation](#example-implementation-)
 
 ## Features 🚀
 
@@ -35,180 +32,119 @@ cargo add translatable
 
 ## Usage 🛠️
 
-### Macro Behavior Matrix
+### Configuration
 
-| Parameters                        | Compile-Time Checks                                              | Return Type                              |
-| --------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- |
-| `static path` + `static language` | - Path existence<br>- Language validity<br>- Template validation | `&'static str`                           |
-| `static path` + dynamic language  | - Path existence<br>- Template structure                         | `Result<&'static str, TranslationError>` |
-| dynamic path + `static language`  | - Language validity                                              | `Result<&'static str, TranslationError>` |
-| dynamic path + dynamic language   | None (runtime checks only)                                       | `Result<&'static str, TranslationError>` |
+There are things you can configure on how translations are loaded from the folder, for this
+you should make a `translatable.toml` in the root of the project, and abide by the following
+configuration values.
 
-### Key Implications
+| Key       | Value type                         | Description                                                                                                                    |
+|-----------|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| `path`      | `String`                             | Where the translation files will be stored, non translation files in that folder will cause errors.                            |
+| `seek_mode` | `"alphabetical"` \| `"unalphabetical"` | The found translations are ordered by file name, based on this field.                                                          |
+| `overlap`   | `"overwrite"` \| `"ignore"`            | Orderly if a translation is found `"overwrite"` will keep searching for translations and `"ignore"` will preserve the current one. |
 
-- **Static Path**  
-  ✅ Verifies translation path exists in TOML files  
-  ❌ Requires path literal (e.g., `static common::greeting`)
+`seek_mode` and `overlap` only reverse the translations as convenient, this way the process
+doesn't get repeated every time a translation is loaded.
 
-- **Static Language**  
-  ✅ Validates ISO 639-1 compliance  
-  ❌ Requires language literal (e.g., `"en"`)
+### Translation file format
 
-- **Mixed Modes**
+All the translation files are going to be loaded from the path specified in the configuration,
+all the files inside the path must be TOML files and sub folders, a `walk_dir` algorithm is used
+to load all the translations inside that folder.
 
-  ```rust
-  // Compile-time path + runtime language
-  translation!(user_lang, static user::profile::title)
+The translation files have three rules
+- Objects (including top level) can only contain objects and strings
+- If an object contains another object, it can only contain other objects (known as nested object)
+- If an object contains a string, it can only contain other strings (known as translation object)
 
-  // Compile-time language + runtime path
-  translation!("fr", dynamic_path)
-  ```
+### Loading translations
 
-- **Full Dynamic**
+The load configuration such as `seek_mode` and `overlap` is not relevant here, as previously
+specified, these configuration values only get applied once by reversing the translations conveniently.
 
-  ```rust
-  // Runtime checks only
-  translation!(lang_var, path_var) // Returns Result
-  ```
+To load translations you make use of the `translatable::translation` macro, that macro requires two
+parameters to be passed.
 
-- **Full Static**
+The first parameter consists of the language which can be passed dynamically as a variable or an expression
+that resolves to an `impl Into<String>`, or statically as a `&'static str` literal. Not mattering the way
+it's passed, the translation must comply with the `ISO 639-1` standard.
 
-  ```rust
-  // Compile-time checks only
-  translation!("en", static common::greeting) // Returns &'static str
-  ```
+The second parameter consists of the path, which can be passed dynamically as a variable or an expression
+that resolves to an `impl Into<String>` with the format `path.to.translation`, or statically with the following
+syntax `static path::to::translation`.
 
-Optimization Guide
+Depending on whether the parameters are static or dynamic the macro will act different, differing whether
+the checks are compile-time or run-time, the following table is a macro behavior matrix.
 
-```rust
-// Maximum safety - fails compile if any issues
-let text = translation!("es", static home::welcome_message);
+| Parameters                                         | Compile-Time checks                                      | Return type                                                                       |
+|----------------------------------------------------|----------------------------------------------------------|-----------------------------------------------------------------------------------|
+| `static language` + `static path` (most optimized) | Path existence, Language validity, \*Template validation | `&'static str` (stack) if there are no templates or `String` (heap) if there are. |
+| `dynamic language` + `dynamic path`                | None                                                     | `Result<String, TranslatableError>` (heap)                                        |
+| `static language` + `dynamic path`                 | Language validity                                        | `Result<String, TranslatableError>` (heap)                                        |
+| `dynamic language` + `static path` (commonly used) | Path existence, \*Template validation                    | `Result<String, TranslatableError>` (heap)                                        |
 
-// Balanced approach - compile-time path validation
-let result = translation!(user_lang, static user::profile::title);
+- For the error handling, if you want to integrate this with `thiserror` you can use a `#[from] translatable::TranslationError`,
+as a nested error, all the errors implement display, for optimization purposes there are not the same amount of errors with
+dynamic parameters than there are with static parameters.
 
-// Flexible runtime - handles dynamic inputs
-let result = translation!(lang_var, path_var)?;
-```
+- The runtime errors implement a `cause()` method that returns a heap allocated `String` with the error reason, essentially
+the error display.
 
-## Example Structure 📂
+- Template validation in the static parameter handling means variable existence, since templates are generated as a `format!`
+call which processes expressions found in scope. It's always recommended to use full paths in translation templates
+to avoid needing to make variables in scope, unless the calls are contextual, in that case there is nothing that can
+be done to avoid making variables.
 
-```txt
+## Example implementation 📂
+
+The following examples are an example application structure for a possible
+real project.
+
+### Example application tree
+
+```plain
 project-root/
 ├── Cargo.toml
 ├── translatable.toml
-└── translations/
-    ├── app.toml
-    ├── errors.toml
-    └── user/
-        ├── profile.toml
+├── translations/
+│    └── app.toml
+└── src/
+     └── main.rs
 ```
 
-### Example Translation File (translations/app.toml)
+### Example translation file (translations/app.toml)
+
+Notice how `common.greeting` has a template named `name`.
 
 ```toml
-[home]
-welcome_message = {
-    en = "Welcome to our app!",
-    es = "¡Bienvenido a nuestra aplicación!"
-}
+[welcome_message]
+en = "Welcome to our app!"
+es = "¡Bienvenido a nuestra aplicación!"
 
-[common]
-greeting = {
-    en = "Hello {name}!",
-    es = "¡Hola {name}!"
-}
+[common.greeting]
+en = "Hello {name}!"
+es = "¡Hola {name}!"
 ```
 
-### Translation File Organization
+### Example application usage
 
-The `translations/` folder can be structured flexibly. You can organize translations based on features, modules, or locales.
-Here are some best practices:
-
-- Keep related translations in subdirectories (`user/profile.toml`, `errors.toml`)
-- Use consistent naming conventions (`common.toml`, `app.toml`)
-- Keep files small and manageable to avoid conflicts
-
-## Configuration ⚙️
-
-Create `translatable.toml` in your project root:
-
-```toml
-path = "./translations"
-seek_mode = "alphabetical"
-overlap = "overwrite"
-```
-
-| Option    | Default        | Description                                 |
-| --------- | -------------- | ------------------------------------------- |
-| path      | ./translations | Translation directory location              |
-| seek_mode | alphabetical   | Order in which translation files are loaded |
-| overlap   | overwrite      | Defines conflict resolution strategy        |
-
-### Configuration Options Explained
-
-- **`seek_mode`**: Controls the order of file processing (e.g., `alphabetical`, `manual`).
-- **`overlap`**: Determines priority when duplicate keys exist (`overwrite` replaces existing keys, `first` keeps the first occurrence).
-
-## Error Handling 🚨
-
-### Invalid Language Code
-
-```sh
-Error: 'e' is not valid ISO 639-1. These are some valid languages including 'e':
-          ae (Avestan),
-          eu (Basque),
-          be (Belarusian),
-          ce (Chechen),
-          en (English),
-          ... (12 more)
-    --> tests/static.rs:5:5
-     |
-   5 |     translation!("e", static salutation::test);
-     |
-     = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
-```
-
-### Structural Validation
-
-```sh
-Error: Invalid TOML structure in file ./translations/test.toml: Translation files must contain either nested tables or language translations, but not both at the same level.
-```
-
-### Template Validation
-
-```sh
-Error: Toml parse error 'invalid inline table
-          expected `}`' in ./translations/test.toml:49:50
-    --> tests/static.rs:5:5
-     |
-   5 |     translation!("es", static salutation::test);
-     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-     |
-     = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
-```
-
-## Integration Guide 🔗
-
-If you're using `translatable` in a web application, here’s how to integrate it:
-
-### Actix-Web Example
+Notice how that template is in scope, whole expressions can be used
+in the templates such as `path::to::function()`, or other constants.
 
 ```rust
-use actix_web::{get, web, App, HttpServer, Responder};
+extern crate translatable;
 use translatable::translation;
 
-#[get("/")]
-async fn home() -> impl Responder {
-    let text = translation!("en", static home::welcome_message);
-    text.to_string()
-}
+fn main() {
+	let dynamic_lang = "es";
+	let dynamic_path = "common.greeting"
+	let name = "john";
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(home))
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await
+	assert!(translation!("es", static common::greeting) == "¡Hola john!");
+	assert!(translation!("es", dynamic_path).unwrap() == "¡Hola john!".into());
+	assert!(translation!(dynamic_lang, static common::greeting).unwrap() == "¡Hola john!".into());
+	assert!(translation!(dynamic_lang, dynamic_path).unwrap() == "¡Hola john!".into());
 }
 ```
+
