@@ -1,37 +1,32 @@
 use thiserror::Error;
-
-// re export the macro in the main crate.
+/// Re-export the procedural macro for crate users
 pub use translatable_proc::translation;
 
-/// This error is used on results for the
-/// translation procedural macro, the macro
-/// will return a Result<Option<&'static str>, Error>,
-/// when there is a dynamic expression to resolve.
+/// Error type for translation resolution failures
 ///
-/// For example, if the language is a dynamic expression
-/// meaning it's not a literal &'static str, and it evaluates
-/// on runtime, if the runtime evaluation is invalid because
-/// the language does not match the ISO 639-1 specification
-/// or something else, the translation macro will return an
-/// Error::InvalidLanguage.
-///
-/// For more information on the possible errors read each
-/// enum branch documentation.
+/// Returned by the translation macro when dynamic resolution fails.
+/// For static resolution failures, errors are reported at compile time.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Invalid ISO 639-1 language code provided
     #[error("The language '{0}' is invalid.")]
     InvalidLanguage(String),
 
+    /// Translation exists but not available for specified language
     #[error("The langauge '{0}' is not available for the path '{1}'")]
     LanguageNotAvailable(String, String),
 
+    /// Requested translation path doesn't exist in any translation files
     #[error("The path '{0}' was not found in any of the translations files.")]
-    PathNotFound(String)
+    PathNotFound(String),
 }
 
 impl Error {
-    /// This method is a convenience implementation
-    /// to obtain the `Display` from each error.
+    /// Returns formatted error message as a String
+    ///
+    /// Useful for error reporting and logging. Marked `#[cold]` to hint to the
+    /// compiler that this path is unlikely to be taken (optimization for error
+    /// paths).
     #[inline]
     #[cold]
     pub fn cause(&self) -> String {
@@ -39,35 +34,38 @@ impl Error {
     }
 }
 
+/// Internal implementation details for translation resolution
 #[doc(hidden)]
 pub mod internal {
     use std::collections::HashMap;
 
+    /// Represents nested translation structures
     #[doc(hidden)]
     pub enum NestingType {
+        /// Intermediate node containing nested translation objects
         Object(HashMap<String, NestingType>),
-        Translation(HashMap<String, String>)
+        /// Leaf node containing actual translations for different languages
+        Translation(HashMap<String, String>),
     }
 
     #[doc(hidden)]
     impl NestingType {
+        /// Resolves a translation path through nested structures
+        ///
+        /// # Arguments
+        /// * `path` - Slice of path segments to resolve
+        ///
+        /// # Returns
+        /// - `Some(&HashMap)` if path resolves to translations
+        /// - `None` if path is invalid
         pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<String, String>> {
             match self {
                 Self::Object(nested) => {
                     let (first, rest) = path.split_first()?;
-
-                    nested
-                        .get(*first)
-                        .and_then(|n| n.get_path(rest.to_vec()))
+                    nested.get(*first)?.get_path(rest.to_vec())
                 },
 
-                Self::Translation(translation) => {
-                    if path.is_empty() {
-                        return Some(translation)
-                    }
-
-                    None
-                }
+                Self::Translation(translation) => path.is_empty().then_some(translation),
             }
         }
     }

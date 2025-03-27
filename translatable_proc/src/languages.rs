@@ -377,9 +377,12 @@ pub enum Iso639a {
     ZU,
 }
 
+/// This struct represents a list of similar languages to the provided one.
 pub struct Similarities<T: Sized> {
+    /// Indicates how many languages are not included in the list.
     overflow_by: usize,
-    similarities: Vec<T>
+    /// List of similar languages.
+    similarities: Vec<T>,
 }
 
 impl<T: Sized> Similarities<T> {
@@ -393,6 +396,7 @@ impl<T: Sized> Similarities<T> {
 }
 
 impl Iso639a {
+    /// This method returns a list of similar languages to the provided one.
     pub fn get_similarities(lang: &str, max_amount: usize) -> Similarities<String> {
         let all_similarities = Self::iter()
             .map(|variant| format!("{variant:#} ({variant:?})"))
@@ -403,16 +407,13 @@ impl Iso639a {
 
         if overflow_by > 0 {
             Similarities {
-                similarities: all_similarities
-                .into_iter()
-                .take(max_amount)
-                .collect(),
-                overflow_by: overflow_by as usize
+                similarities: all_similarities.into_iter().take(max_amount).collect(),
+                overflow_by: overflow_by as usize,
             }
         } else {
             Similarities {
                 similarities: all_similarities,
-                overflow_by: 0
+                overflow_by: 0,
             }
         }
     }

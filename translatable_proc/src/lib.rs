@@ -1,4 +1,5 @@
-//! Internationalization library providing compile-time and runtime translation facilities
+//! Internationalization library providing compile-time and runtime translation
+//! facilities
 //!
 //! # Features
 //! - TOML-based translation files

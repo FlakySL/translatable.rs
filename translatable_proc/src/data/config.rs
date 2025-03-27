@@ -3,12 +3,14 @@
 //! This module provides functionality to load and manage configuration
 //! settings for localization/translation workflows from a TOML file.
 
-use serde::Deserialize;
 use std::fs::read_to_string;
 use std::io::Error as IoError;
 use std::sync::OnceLock;
+
+use serde::Deserialize;
 use thiserror::Error;
-use toml::{de::Error as TomlError, from_str as toml_from_str};
+use toml::de::Error as TomlError;
+use toml::from_str as toml_from_str;
 
 /// Errors that can occur during configuration loading
 #[derive(Error, Debug)]
@@ -82,7 +84,8 @@ pub struct TranslatableConfig {
 
     /// Translation conflict resolution strategy
     ///
-    /// Determines behavior when multiple files contain the same translation path
+    /// Determines behavior when multiple files contain the same translation
+    /// path
     #[serde(default)]
     overlap: TranslationOverlap,
 }
@@ -123,11 +126,10 @@ pub fn load_config() -> Result<&'static TranslatableConfig, ConfigError> {
         return Ok(config);
     }
 
-    let config: TranslatableConfig = toml_from_str(
-        read_to_string("./translatable.toml")
+    let config: TranslatableConfig =
+        toml_from_str(read_to_string("./translatable.toml")
             .unwrap_or("".into()) // if no config file is found use defaults.
-            .as_str(),
-    )?;
+            .as_str())?;
 
     Ok(TRANSLATABLE_CONFIG.get_or_init(|| config))
 }

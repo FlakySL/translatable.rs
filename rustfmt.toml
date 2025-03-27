@@ -1,0 +1,36 @@
+# Formatting width settings
+max_width = 100
+use_small_heuristics = "Max"
+
+# Indentation & spacing
+tab_spaces = 4
+hard_tabs = false
+newline_style = "Unix"
+
+# Function & struct formatting
+fn_single_line = false
+struct_lit_width = 40
+struct_variant_width = 40
+
+# Imports & ordering
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
+
+# Wrapping & line breaking
+wrap_comments = true
+format_strings = true
+match_arm_leading_pipes = "Preserve"
+match_block_trailing_comma = true
+trailing_comma = "Vertical"
+
+# Miscellaneous
+condense_wildcard_suffixes = true
+force_explicit_abi = true
+merge_derives = true
+normalize_comments = true
+normalize_doc_attributes = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+edition = "2024"
