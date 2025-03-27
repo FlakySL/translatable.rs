@@ -17,7 +17,8 @@ fn language_static_path_dynamic() {
 #[test]
 fn language_dynamic_path_static() {
     let language = "es";
-    let result = translation!(language, static common::greeting, name = "john");
+    let name = "john";
+    let result = translation!(language, static common::greeting, name = name);
 
     assert!(result.unwrap() == "¡Hola john!".to_string())
 }

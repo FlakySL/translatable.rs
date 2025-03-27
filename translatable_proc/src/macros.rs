@@ -82,7 +82,24 @@ impl Parse for RawMacroArgs {
                 if lookahead.peek(Ident) {
                     let key: Ident = input.parse()?;
                     let eq_token: Token![=] = input.parse().unwrap_or(Token![=](key.span()));
-                    let value: Expr = input.parse().unwrap_or(parse_quote!(#key));
+                    let mut value = input.parse::<Expr>();
+
+                    if let Ok(value) = &mut value {
+                        let key_string = key.to_string();
+                        if key_string == value.to_token_stream().to_string() {
+//                            let warning = format!(
+//                                "redundant field initialier, use `{key_string}` instead of `{key_string} = {key_string}`"
+//                            );
+
+                            *value = parse_quote! {{
+                                // compile_warn!(#warning);
+                                // !!! https://internals.rust-lang.org/t/pre-rfc-add-compile-warning-macro/9370 !!!
+                                #value
+                            }}
+                        }
+                    }
+
+                    let value = value.unwrap_or(parse_quote!(#key));
 
                     format_kwargs.push(MetaNameValue {
                         path: Path::from(key),
