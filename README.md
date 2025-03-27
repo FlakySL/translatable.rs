@@ -11,6 +11,7 @@ A robust internationalization solution for Rust featuring compile-time validatio
 - [Installation](#installation-)
 - [Usage](#usage-)
 - [Example implementation](#example-implementation-)
+- [Licensing](#license-)
 
 ## Features 🚀
 
@@ -148,7 +149,7 @@ fn main() {
 }
 ```
 
-## License
+## License 📜
 
 <sup>
 This repository is licensed under either of <a href="LICENSE-APACHE">Apache License, Version 2.0</a>
