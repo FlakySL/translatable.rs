@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
@@ -211,7 +212,7 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
 }
 
 /// Helper function to create compile error tokens
-fn error_token(e: &impl std::fmt::Display) -> TokenStream {
+fn error_token(e: &impl Display) -> TokenStream {
     let msg = format!("{e:#}");
     quote! { compile_error!(#msg) }
 }

@@ -3,11 +3,25 @@ use std::collections::HashMap;
 use proc_macro2::TokenStream;
 use quote::quote;
 use strum::IntoEnumIterator;
-use syn::{Expr, parse2};
+use syn::{parse2, parse_str, Error as SynError, Expr, Ident};
 
 use super::errors::TranslationError;
 use crate::data::translations::load_translations;
 use crate::languages::Iso639a;
+
+fn kwarg_dynamic_replaces(format_kwargs: HashMap<String, TokenStream>) -> Vec<TokenStream> {
+    format_kwargs
+        .iter()
+        .map(|(key, value)|
+            quote! {
+                .map(|translation| translation.replace(
+                    format!("{{{}}}", #key).as_str(),
+                    format!("{:#}", #value).as_str()
+                ))
+            }
+        )
+        .collect::<Vec<_>>()
+}
 
 /// Parses a static language string into an Iso639a enum instance with
 /// compile-time validation.
@@ -80,7 +94,26 @@ pub fn load_translation_static(
                 .get(&language)
                 .ok_or(TranslationError::LanguageNotAvailable(language, path))?;
 
-            quote! { #translation }
+            if format_kwargs.is_empty() {
+                quote! { #translation }
+            } else {
+                let format_kwargs = format_kwargs
+                    .iter()
+                    .map(|(key, value)| {
+                        let key: Ident = parse_str(&key)?;
+                        Ok::<TokenStream, SynError>(quote! {
+                            #[doc(hidden)]
+                            let #key = #value;
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                quote! {{
+                    #(#format_kwargs)*
+
+                    format!(#translation)
+                }}
+            }
         },
 
         None => {
@@ -88,6 +121,7 @@ pub fn load_translation_static(
                 let key = format!("{key:?}").to_lowercase();
                 quote! { (#key, #value) }
             });
+            let replaces = kwarg_dynamic_replaces(format_kwargs);
 
             quote! {{
                 if valid_lang {
@@ -98,6 +132,7 @@ pub fn load_translation_static(
                         .ok_or(translatable::Error::LanguageNotAvailable(language, #path.to_string()))
                         .cloned()
                         .map(|translation| translation.to_string())
+                        #(#replaces)*
                 } else {
                     Err(translatable::Error::InvalidLanguage(language))
                 }
@@ -141,6 +176,8 @@ pub fn load_translation_dynamic(
             ));
     };
 
+    let replaces = kwarg_dynamic_replaces(format_kwargs);
+
     Ok(match static_lang {
         Some(language) => {
             let language = format!("{language:?}").to_lowercase();
@@ -153,6 +190,7 @@ pub fn load_translation_dynamic(
                         .get(#language)
                         .ok_or(translatable::Error::LanguageNotAvailable(#language.to_string(), path))
                         .cloned()
+                        #(#replaces)*
                 } else {
                     Err(translatable::Error::PathNotFound(path))
                 }
@@ -169,6 +207,7 @@ pub fn load_translation_dynamic(
                             .get(&language)
                             .ok_or(translatable::Error::LanguageNotAvailable(language, path))
                             .cloned()
+                            #(#replaces)*
                     } else {
                         Err(translatable::Error::PathNotFound(path))
                     }
