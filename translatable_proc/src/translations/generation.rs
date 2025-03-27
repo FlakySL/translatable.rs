@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 use strum::IntoEnumIterator;
@@ -65,6 +67,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
 pub fn load_translation_static(
     static_lang: Option<Iso639a>,
     path: String,
+    format_kwargs: HashMap<String, TokenStream>
 ) -> Result<TokenStream, TranslationError> {
     let translation_object = load_translations()?
         .iter()
@@ -114,6 +117,7 @@ pub fn load_translation_static(
 pub fn load_translation_dynamic(
     static_lang: Option<Iso639a>,
     path: TokenStream,
+    format_kwargs: HashMap<String, TokenStream>
 ) -> Result<TokenStream, TranslationError> {
     let nestings = load_translations()?
         .iter()

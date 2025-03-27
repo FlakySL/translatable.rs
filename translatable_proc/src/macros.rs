@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
 use syn::token::Static;
-use syn::{Expr, ExprLit, ExprPath, Lit, Result as SynResult, Token};
+use syn::{parse_quote, Expr, ExprLit, ExprPath, Lit, MetaNameValue, Path, Result as SynResult, Token, Ident};
 
 use crate::translations::generation::{
     load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static,
@@ -24,6 +27,10 @@ pub struct RawMacroArgs {
     static_marker: Option<Static>,
     /// Translation path (either static path or dynamic expression)
     path: Expr,
+
+    _comma2: Option<Token![,]>,
+
+    format_kwargs: Punctuated<MetaNameValue, Token![,]>,
 }
 
 /// Represents the type of translation path resolution
@@ -48,15 +55,58 @@ pub struct TranslationArgs {
     language: LanguageType,
     /// Path resolution type
     path: PathType,
+
+    format_kwargs: HashMap<String, TokenStream>
 }
 
 impl Parse for RawMacroArgs {
     fn parse(input: ParseStream) -> SynResult<Self> {
+        let language = input.parse()?;
+        let _comma = input.parse()?;
+        let static_marker = input.parse()?;
+        let path = input.parse()?;
+
+        let _comma2 = if input.peek(Token![,]) {
+            Some(input.parse()?)
+        } else {
+            None
+        };
+
+        let mut format_kwargs = Punctuated::new();
+
+        if _comma2.is_some()  {
+            while !input.is_empty() {
+                let lookahead = input.lookahead1();
+
+                if lookahead.peek(Ident) {
+                    let key: Ident = input.parse()?;
+                    let eq_token: Token![=] = input.parse().unwrap_or(Token![=](key.span()));
+                    let value: Expr = input.parse().unwrap_or(parse_quote!(#key));
+
+                    format_kwargs.push(MetaNameValue {
+                        path: Path::from(key),
+                        eq_token,
+                        value
+                    });
+                } else {
+                    format_kwargs.push(input.parse()?);
+                }
+
+                if input.peek(Token![,]) {
+                    input.parse::<Token![,]>()?;
+                } else {
+                    break;
+                }
+            }
+        };
+
         Ok(RawMacroArgs {
-            language: input.parse()?,
-            _comma: input.parse()?,
-            static_marker: input.parse()?,
-            path: input.parse()?,
+            language,
+            _comma,
+            static_marker,
+            path,
+            _comma2,
+            format_kwargs,
         })
     }
 }
@@ -96,6 +146,25 @@ impl From<RawMacroArgs> for TranslationArgs {
                 // Preserve dynamic path expressions
                 path => PathType::OnScopeExpression(quote!(#path)),
             },
+
+            format_kwargs: val
+                .format_kwargs
+                .iter()
+                .map(|pair| (
+                    pair
+                        .path
+                        .get_ident()
+                        .map(|i| i.to_string())
+                        .unwrap_or_else(|| pair
+                            .path
+                            .to_token_stream()
+                            .to_string()
+                        ),
+                    pair
+                        .value
+                        .to_token_stream()
+                ))
+                .collect()
         }
     }
 }
@@ -111,7 +180,7 @@ impl From<RawMacroArgs> for TranslationArgs {
 /// - Runtime translation resolution logic
 /// - Compile errors for invalid inputs
 pub fn translation_macro(args: TranslationArgs) -> TokenStream {
-    let TranslationArgs { language, path } = args;
+    let TranslationArgs { language, path, format_kwargs } = args;
 
     // Process language specification
     let (lang_expr, static_lang) = match language {
@@ -129,8 +198,8 @@ pub fn translation_macro(args: TranslationArgs) -> TokenStream {
 
     // Process translation path
     let translation_expr = match path {
-        PathType::CompileTimePath(p) => load_translation_static(static_lang, p),
-        PathType::OnScopeExpression(p) => load_translation_dynamic(static_lang, p),
+        PathType::CompileTimePath(p) => load_translation_static(static_lang, p, format_kwargs),
+        PathType::OnScopeExpression(p) => load_translation_dynamic(static_lang, p, format_kwargs),
     };
 
     match (lang_expr, translation_expr) {

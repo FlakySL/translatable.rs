@@ -29,7 +29,7 @@ fn language_dynamic_path_static() {
 fn both_dynamic() {
     let name = "john";
     let language = "es";
-    let result = translation!(language, "common.greeting");
+    let result = translation!(language, "common.greeting", lol = 10, name);
 
     assert!(result.unwrap() == "¡Hola john!".to_string())
 }
