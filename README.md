@@ -156,6 +156,8 @@ This repository is licensed under either of <a href="LICENSE-APACHE">Apache Lice
 or <a href="LICENSE-MIT">MIT license</a> at your option.
 </sup>
 
+<sub>
 Unless you explicitly state any contribution intentionally submitted
 for inclusion in translatable by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+</sub>
