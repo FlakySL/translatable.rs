@@ -1,0 +1,28 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: "💬 Community Help (Discord)"
+    url: https://discord.gg/AJWFyps23a
+    about: |
+      For general questions, discussion, or brainstorming:
+      - Get real-time help from maintainers
+      - Discuss potential features
+      - Chat with other contributors
+      *Please check existing issues first!*
+
+  - name: "⚖️ Code of Conduct"
+    url: https://www.rust-lang.org/policies/code-of-conduct
+    about: |
+      All community interactions must follow:
+      - Rust's Code of Conduct
+      - Project-specific guidelines
+      *Required reading before participating*
+
+  - name: "🚨 Moderation Contact"
+    url: mailto:esteve@memw.es
+    about: |
+      For urgent moderation issues:
+      - Code of Conduct violations
+      - Community safety concerns
+      - Escalation requests
+      *Do NOT contact Rust moderation team*
