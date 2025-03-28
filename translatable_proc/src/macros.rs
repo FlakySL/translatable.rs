@@ -2,11 +2,14 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::Static;
-use syn::{parse_quote, Expr, ExprLit, ExprPath, Lit, MetaNameValue, Path, Result as SynResult, Token, Ident};
+use syn::{
+    Expr, ExprLit, ExprPath, Ident, Lit, MetaNameValue, Path, Result as SynResult, Token,
+    parse_quote,
+};
 
 use crate::translations::generation::{
     load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static,
@@ -28,9 +31,9 @@ pub struct RawMacroArgs {
     static_marker: Option<Static>,
     /// Translation path (either static path or dynamic expression)
     path: Expr,
-
+    /// Optional comma separator for additional arguments
     _comma2: Option<Token![,]>,
-
+    /// Format arguments for string interpolation
     format_kwargs: Punctuated<MetaNameValue, Token![,]>,
 }
 
@@ -56,8 +59,8 @@ pub struct TranslationArgs {
     language: LanguageType,
     /// Path resolution type
     path: PathType,
-
-    format_kwargs: HashMap<String, TokenStream>
+    /// Format arguments for string interpolation
+    format_kwargs: HashMap<String, TokenStream>,
 }
 
 impl Parse for RawMacroArgs {
@@ -67,18 +70,17 @@ impl Parse for RawMacroArgs {
         let static_marker = input.parse()?;
         let path = input.parse()?;
 
-        let _comma2 = if input.peek(Token![,]) {
-            Some(input.parse()?)
-        } else {
-            None
-        };
+        // Parse optional comma before format arguments
+        let _comma2 = if input.peek(Token![,]) { Some(input.parse()?) } else { None };
 
         let mut format_kwargs = Punctuated::new();
 
-        if _comma2.is_some()  {
+        // Parse format arguments if comma was present
+        if _comma2.is_some() {
             while !input.is_empty() {
                 let lookahead = input.lookahead1();
 
+                // Handle both identifier-based and arbitrary key-value pairs
                 if lookahead.peek(Ident) {
                     let key: Ident = input.parse()?;
                     let eq_token: Token![=] = input.parse().unwrap_or(Token![=](key.span()));
@@ -87,10 +89,12 @@ impl Parse for RawMacroArgs {
                     if let Ok(value) = &mut value {
                         let key_string = key.to_string();
                         if key_string == value.to_token_stream().to_string() {
-//                            let warning = format!(
-//                                "redundant field initialier, use `{key_string}` instead of `{key_string} = {key_string}`"
-//                            );
+                            // let warning = format!(
+                            //     "redundant field initialier, use
+                            //  `{key_string}` instead of `{key_string} = {key_string}`"
+                            // );
 
+                            // Generate warning for redundant initializer
                             *value = parse_quote! {{
                                 // compile_warn!(#warning);
                                 // !!! https://internals.rust-lang.org/t/pre-rfc-add-compile-warning-macro/9370 !!!
@@ -101,15 +105,12 @@ impl Parse for RawMacroArgs {
 
                     let value = value.unwrap_or(parse_quote!(#key));
 
-                    format_kwargs.push(MetaNameValue {
-                        path: Path::from(key),
-                        eq_token,
-                        value
-                    });
+                    format_kwargs.push(MetaNameValue { path: Path::from(key), eq_token, value });
                 } else {
                     format_kwargs.push(input.parse()?);
                 }
 
+                // Continue parsing while commas are present
                 if input.peek(Token![,]) {
                     input.parse::<Token![,]>()?;
                 } else {
@@ -136,6 +137,7 @@ impl From<RawMacroArgs> for TranslationArgs {
         TranslationArgs {
             // Extract language specification
             language: match val.language {
+                // Handle string literals for compile-time validation
                 Expr::Lit(ExprLit { lit: Lit::Str(lit_str), .. }) => {
                     LanguageType::CompileTimeLiteral(lit_str.value())
                 },
@@ -165,24 +167,22 @@ impl From<RawMacroArgs> for TranslationArgs {
                 path => PathType::OnScopeExpression(quote!(#path)),
             },
 
+            // Convert format arguments to HashMap with string keys
             format_kwargs: val
                 .format_kwargs
                 .iter()
-                .map(|pair| (
-                    pair
-                        .path
-                        .get_ident()
-                        .map(|i| i.to_string())
-                        .unwrap_or_else(|| pair
-                            .path
-                            .to_token_stream()
-                            .to_string()
-                        ),
-                    pair
-                        .value
-                        .to_token_stream()
-                ))
-                .collect()
+                .map(|pair| {
+                    (
+                        // Extract key as identifier or stringified path
+                        pair.path
+                            .get_ident()
+                            .map(|i| i.to_string())
+                            .unwrap_or_else(|| pair.path.to_token_stream().to_string()),
+                        // Store value as token stream
+                        pair.value.to_token_stream(),
+                    )
+                })
+                .collect(),
         }
     }
 }

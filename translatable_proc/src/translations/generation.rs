@@ -3,12 +3,36 @@ use std::collections::HashMap;
 use proc_macro2::TokenStream;
 use quote::quote;
 use strum::IntoEnumIterator;
-use syn::{parse2, Expr};
+use syn::{Expr, parse2};
 
 use super::errors::TranslationError;
 use crate::data::translations::load_translations;
 use crate::languages::Iso639a;
 
+/// Generates compile-time string replacement logic for a single format
+/// argument.
+///
+/// Implements a three-step replacement strategy to safely handle nested
+/// templates:
+/// 1. Temporarily replace `{{key}}` with `\x01{key}\x01` to protect wrapper
+///    braces
+/// 2. Replace `{key}` with the provided value
+/// 3. Restore original `{key}` syntax from temporary markers
+///
+/// # Arguments
+/// * `key` - Template placeholder name (without braces)
+/// * `value` - Expression to substitute, must implement `std::fmt::Display`
+///
+/// # Example
+/// For key = "name" and value = `user.first_name`:
+/// ```rust
+/// let template = "{{name}} is a user";
+///
+/// template
+///     .replace("{{name}}", "\x01{name}\x01")
+///     .replace("{name}", &format!("{:#}", "Juan"))
+///     .replace("\x01{name}\x01", "{name}");
+/// ```
 fn kwarg_static_replaces(key: &str, value: &TokenStream) -> TokenStream {
     quote! {
         .replace(
@@ -26,6 +50,21 @@ fn kwarg_static_replaces(key: &str, value: &TokenStream) -> TokenStream {
     }
 }
 
+/// Generates runtime-safe template substitution chain for multiple format
+/// arguments.
+///
+/// Creates an iterator of chained replacement operations that will be applied
+/// sequentially at runtime while preserving nested template syntax.
+///
+/// # Arguments
+/// * `format_kwargs` - Key/value pairs where:
+///   - Key: Template placeholder name
+///   - Value: Runtime expression implementing `Display`
+///
+/// # Note
+/// The replacement order is important to prevent accidental substitution in
+/// nested templates. All replacements are wrapped in `Option::map` to handle
+/// potential `None` values from translation lookup.
 fn kwarg_dynamic_replaces(format_kwargs: &HashMap<String, TokenStream>) -> Vec<TokenStream> {
     format_kwargs
         .iter()
@@ -98,7 +137,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
 pub fn load_translation_static(
     static_lang: Option<Iso639a>,
     path: String,
-    format_kwargs: HashMap<String, TokenStream>
+    format_kwargs: HashMap<String, TokenStream>,
 ) -> Result<TokenStream, TranslationError> {
     let translation_object = load_translations()?
         .iter()
@@ -158,7 +197,7 @@ pub fn load_translation_static(
 pub fn load_translation_dynamic(
     static_lang: Option<Iso639a>,
     path: TokenStream,
-    format_kwargs: HashMap<String, TokenStream>
+    format_kwargs: HashMap<String, TokenStream>,
 ) -> Result<TokenStream, TranslationError> {
     let nestings = load_translations()?
         .iter()
