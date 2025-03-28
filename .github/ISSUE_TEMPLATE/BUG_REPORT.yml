@@ -1,7 +1,7 @@
 name: Bug Report
 description: Report unexpected behavior or crashes
 title: "[BUG] "
-labels: ["bug", "triage"]
+labels: ["bug-report", "triage"]
 body:
   - type: checkboxes
     attributes:
@@ -11,6 +11,8 @@ body:
           required: true
         - label: I've read the [Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct)
           required: true
+        - label: Are you using the latest translatable version?
+          required: true
 
   - type: dropdown
     attributes:
@@ -19,21 +21,13 @@ body:
         - Core library
         - Macros crate
         - Documentation
-        - CI/CD
-    validations:
-      required: true
-
-  - type: input
-    attributes:
-      label: Translatable Version
-      placeholder: 0.x.x
     validations:
       required: true
 
   - type: input
     attributes:
       label: Rust Version
-      placeholder: Output of `rustc -V`
+      placeholder: Output of `rustc --version`
     validations:
       required: true
 

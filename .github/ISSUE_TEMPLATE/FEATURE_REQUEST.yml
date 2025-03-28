@@ -1,7 +1,7 @@
 name: Feature Request
 description: Suggest an idea for Translatable
 title: "[FEATURE] "
-labels: ["enhancement", "triage"]
+labels: ["feature-request", "triage"]
 body:
   - type: checkboxes
     attributes:
@@ -23,6 +23,8 @@ body:
     attributes:
       label: Proposed Solution
       description: How should Translatable address this problem?
+    validations:
+      required: true
 
   - type: textarea
     attributes:
