@@ -7,7 +7,13 @@ readme = "../README.md"
 version = "0.1.0"
 edition = "2024"
 authors = ["Esteve Autet <esteve@memw.es>", "Chiko <chiko@envs.net>"]
-tags = ["i18n", "translations", "idioms", "languages", "internazionalization"]
+keywords = [
+    "i18n",
+    "translations",
+    "idioms",
+    "languages",
+    "internazionalization",
+]
 
 [dependencies]
 thiserror = "2.0.12"

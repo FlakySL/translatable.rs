@@ -1,35 +1,30 @@
-# Contributing to translatable
+# Contributing to Translatable
 
-In translatable we welcome any contribution from anyone, bug reports, pull requests, and feedback.
-This document serves as guidance if you are thinking of submitting any of the above.
+In Translatable, we welcome contributions from everyone, including bug reports, pull requests, and feedback. This document serves as guidance if you are considering submitting any of the above.
 
-## Submitting bug reports and feature requests
+## Submitting Bug Reports and Feature Requests
 
-To submit a bug report or feature request you can open an issue in this repository `FlakySL/translatable`.
+To submit a bug report or feature request, you can open an issue in this repository: [`FlakySL/translatable.rs`](https://github.com/FlakySL/translatable.rs).
 
-When reporting a bug or asking for help, please include enough details so that the people helping you
-can reproduce the behavior you are seeking. For some tips on how to approach this, read about how to
-produce a (Minimal, Complete, and Verifiable example)[https://stackoverflow.com/help/minimal-reproducible-example].
+When reporting a bug or requesting help, please include sufficient details to allow others to reproduce the behavior you're encountering. For guidance on how to approach this, read about [How to Create a Minimal, Reproducible Example](https://stackoverflow.com/help/minimal-reproducible-example).
 
-When making a feature request, please make it clear what problem you intend to solve with the feature,
-any ideas for how translatable could support solving that problem, any possible alternatives, and any
-disadvantages.
+When making a feature request, please clearly explain:
+1. The problem you want to solve
+2. How Translatable could help address this problem
+3. Any potential alternatives
+4. Possible disadvantages of your proposal
 
-Before submitting anything please, check that another issue with your same problem/request does not
-already exist, if you want to extend on a problem or have an actual conversation about it, you can
-use our discord channel [at Flaky](https://discord.gg/AJWFyps23a).
+Before submitting, please verify that no existing issue addresses your specific problem/request. If you want to elaborate on a problem or discuss it further, you can use our [Discord channel](https://discord.gg/AJWFyps23a) at Flaky.
 
-It is recommended that you use the issue templates provided in this repository.
+We recommend using the issue templates provided in this repository.
 
-## Running tests and compiling the project
+## Running Tests and Compiling the Project
 
-This project uses [`make`](https://www.gnu.org/software/make/) for everything you may want to run.
+This project uses [`make`](https://www.gnu.org/software/make/) for all common tasks:
 
-- To run tests you can use the `make test` command, that runs both integration and unit tests.
-- To compile the project alone you may use `make compile`, that simply compiles the project in each
-target directory.
+- Run `make test` to execute both integration and unit tests
+- Use `make compile` to compile the project in each target directory
 
-## Code of conduct
+## Code of Conduct
 
-In translatable and community we abide by the [Rust code of conduct](https://www.rust-lang.org/policies/code-of-conduct).
-For escalation or moderation issues please contact Esteve ([esteve@memw.es](esteve@memw.es)) instead of the Rust moderation team.
+The Translatable community follows the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct). For moderation issues or escalation, please contact Esteve at [esteve@memw.es](mailto:esteve@memw.es) rather than the Rust moderation team.

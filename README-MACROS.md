@@ -1,10 +1,7 @@
-# Translatable macros
+# Translatable Macros
 
-The sole purpose of this crate is exporting macros for the [translatable](https://crates.io/crates/translatable)
-package, using this crate without the other one is not supported, and support requests or bug reports
-for the use of this will redirect you to use [translatable](https://crates.io/crates/translatable).
+This crate exists solely to provide macros for the [Translatable](https://crates.io/crates/translatable) crate. Using this crate without the main Translatable crate is **not supported**, and any support requests or bug reports regarding standalone usage will be redirected to the [Translatable](https://crates.io/crates/translatable) crate.
 
 ## Licensing
 
-Licensing for this crate follows the [translatable](https://crates.io/crates/translatable) licensing,
-as they are essentially the same package.
+This crate shares the same licensing terms as [Translatable](https://crates.io/crates/translatable), as these crates are essentially part of the same ecosystem.
