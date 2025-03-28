@@ -1,0 +1,37 @@
+name: Feature Request
+description: Suggest an idea for Translatable
+title: "[FEATURE] "
+labels: ["feature-request", "triage"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I've checked existing issues and pull requests
+          required: true
+        - label: I've read the [Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct)
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Problem Description
+      description: What problem are you trying to solve?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: How should Translatable address this problem?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Alternatives Considered
+      description: Other ways this could potentially be solved
+
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Potential disadvantages, edge cases, or examples
