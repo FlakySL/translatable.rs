@@ -1,0 +1,45 @@
+error: unexpected end of input, expected an expression
+ --> tests/static/missing_args.rs:5:13
+  |
+5 |     let _ = translation!();
+  |             ^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `,`
+ --> tests/static/missing_args.rs:8:13
+  |
+8 |     let _ = translation!("es");
+  |             ^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `|`
+  --> tests/static/missing_args.rs:11:33
+   |
+11 |     let _ = translation!(static common::greeting);
+   |                                 ^^^^^^
+
+error: unexpected end of input, expected an expression
+  --> tests/static/missing_args.rs:14:13
+   |
+14 |     let _ = translation!();
+   |             ^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: An IO Error occurred: No such file or directory (os error 2)
+  --> tests/static/missing_args.rs:17:13
+   |
+17 |     let _ = translation!("es", static common::greeting);
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: An IO Error occurred: No such file or directory (os error 2)
+  --> tests/static/missing_args.rs:20:13
+   |
+20 |     let _ = translation!("es", static common::greeting, name);
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
