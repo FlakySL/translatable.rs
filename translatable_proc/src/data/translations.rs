@@ -10,7 +10,6 @@ use thiserror::Error;
 use toml::{Table, Value};
 
 use super::config::{SeekMode, TranslationOverlap, load_config};
-use crate::languages::Iso639a;
 use crate::translations::errors::TranslationError;
 
 /// Errors occurring during TOML-to-translation structure transformation

@@ -12,7 +12,6 @@ use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
 mod data;
-mod languages;
 mod macros;
 mod translations;
 

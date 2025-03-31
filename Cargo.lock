@@ -244,6 +244,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "translatable_shared"
+version = "0.1.0"
+dependencies = [
+ "strum",
+]
+
+[[package]]
 name = "trybuild"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"

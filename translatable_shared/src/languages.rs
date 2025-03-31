@@ -8,7 +8,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 /// - Complete ISO 639-1 coverage
 #[derive(Debug, Clone, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
 #[strum(ascii_case_insensitive)]
-pub enum Iso639a {
+pub enum Language {
     #[strum(serialize = "Abkhazian", serialize = "ab")]
     AB,
     #[strum(serialize = "Afar", serialize = "aa")]
@@ -395,7 +395,7 @@ impl<T: Sized> Similarities<T> {
     }
 }
 
-impl Iso639a {
+impl Language {
     /// This method returns a list of similar languages to the provided one.
     pub fn get_similarities(lang: &str, max_amount: usize) -> Similarities<String> {
         let all_similarities = Self::iter()
@@ -419,7 +419,7 @@ impl Iso639a {
     }
 }
 
-impl PartialEq<String> for Iso639a {
+impl PartialEq<String> for Language {
     fn eq(&self, other: &String) -> bool {
         format!("{self:?}").to_lowercase() == other.to_lowercase()
     }
