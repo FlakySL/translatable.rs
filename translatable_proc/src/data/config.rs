@@ -106,10 +106,10 @@ static TRANSLATABLE_CONFIG: OnceLock<MacroConfig> = OnceLock::new();
 /// - Config file must be named `translatable.toml` in root directory
 /// - Environment variables take precedence over TOML configuration
 /// - Supported environment variables:
-///   - `LOCALES_PATH`: Overrides translation directory path
-///   - `SEEK_MODE`: Sets file processing order ("alphabetical" or
+///   - `TRANSLATABLE_LOCALES_PATH`: Overrides translation directory path
+///   - `TRANSLATABLE_SEEK_MODE`: Sets file processing order ("alphabetical" or
 ///     "unalphabetical")
-///   - `TRANSLATION_OVERLAP`: Sets conflict strategy ("overwrite" or "ignore")
+///   - `TRANSLATABLE_OVERLAP`: Sets conflict strategy ("overwrite" or "ignore")
 ///
 /// # Panics
 /// Will not panic but returns ConfigError for:
@@ -147,7 +147,7 @@ pub fn load_config() -> Result<&'static MacroConfig, ConfigError> {
     }
 
     let config = MacroConfig {
-        path: config_value!("TRANSLATABLE_PATH", "path", "./translatable.toml"),
+        path: config_value!("TRANSLATABLE_LOCALES_PATH", "path", "./translations"),
         overlap: config_value!(parse(
             "TRANSLATABLE_OVERLAP",
             "overlap",
