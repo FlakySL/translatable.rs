@@ -28,18 +28,8 @@ error: unexpected end of input, expected an expression
    |
    = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: An IO Error occurred: No such file or directory (os error 2)
-  --> tests/static/missing_args.rs:17:13
-   |
-17 |     let _ = translation!("es", static common::greeting);
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error: An IO Error occurred: No such file or directory (os error 2)
-  --> tests/static/missing_args.rs:20:13
+error[E0425]: cannot find value `name` in this scope
+  --> tests/static/missing_args.rs:20:57
    |
 20 |     let _ = translation!("es", static common::greeting, name);
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: this error originates in the macro `translation` (in Nightly builds, run with -Z macro-backtrace for more info)
+   |                                                         ^^^^ not found in this scope
