@@ -146,10 +146,10 @@ fn main() {
     let dynamic_lang = "es";
     let dynamic_path = "common.greeting"
 
-    assert!(translation!("es", static common::greeting) == "¡Hola john!", name = "john");
-    assert!(translation!("es", dynamic_path).unwrap() == "¡Hola john!".into(), name = "john");
-    assert!(translation!(dynamic_lang, static common::greeting).unwrap() == "¡Hola john!".into(), name = "john");
-    assert!(translation!(dynamic_lang, dynamic_path).unwrap() == "¡Hola john!".into(), name = "john");
+    assert!(translation!("es", static common::greeting, name = "john") == "¡Hola john!");
+    assert!(translation!("es", dynamic_path, name = "john").unwrap() == "¡Hola john!".into());
+    assert!(translation!(dynamic_lang, static common::greeting, name = "john").unwrap() == "¡Hola john!".into());
+    assert!(translation!(dynamic_lang, dynamic_path, name = "john").unwrap() == "¡Hola john!".into());
 }
 ```
 
