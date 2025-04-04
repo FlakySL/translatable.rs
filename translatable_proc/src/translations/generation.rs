@@ -5,9 +5,10 @@ use quote::quote;
 use strum::IntoEnumIterator;
 use syn::{Expr, parse2};
 
+use translatable_shared::Language;
+
 use super::errors::TranslationError;
 use crate::data::translations::load_translations;
-use crate::languages::Iso639a;
 
 /// Generates compile-time string replacement logic for a single format
 /// argument.
@@ -88,8 +89,9 @@ fn kwarg_dynamic_replaces(format_kwargs: &HashMap<String, TokenStream>) -> Vec<T
 /// # Returns
 /// - `Ok(Iso639a)` if valid language code
 /// - `Err(TranslationError)` if parsing fails
-pub fn load_lang_static(lang: &str) -> Result<Iso639a, TranslationError> {
-    lang.parse::<Iso639a>().map_err(|_| TranslationError::InvalidLanguage(lang.to_string()))
+pub fn load_lang_static(lang: &str) -> Result<Language, TranslationError> {
+    lang.parse::<Language>()
+        .map_err(|_| TranslationError::InvalidLanguage(lang.to_string()))
 }
 
 /// Generates runtime validation for a dynamic language expression.
@@ -104,11 +106,12 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
     let lang: Expr = parse2(lang)?;
 
     // Generate list of available language codes
-    let available_langs = Iso639a::iter().map(|language| {
-        let language = format!("{language:?}");
+    let available_langs = Language::iter()
+        .map(|language| {
+            let language = format!("{language:?}");
 
-        quote! { #language, }
-    });
+            quote! { #language, }
+        });
 
     // The `String` explicit type serves as
     // expression type checking, we accept `impl Into<String>`
@@ -135,7 +138,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
 /// # Returns
 /// TokenStream with either direct translation or language lookup logic
 pub fn load_translation_static(
-    static_lang: Option<Iso639a>,
+    static_lang: Option<Language>,
     path: String,
     format_kwargs: HashMap<String, TokenStream>,
 ) -> Result<TokenStream, TranslationError> {

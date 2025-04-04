@@ -5,7 +5,7 @@ use thiserror::Error;
 /// Returned by the translation macro when dynamic resolution fails.
 /// For static resolution failures, errors are reported at compile time.
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum RuntimeError {
     /// Invalid ISO 639-1 language code provided
     #[error("The language '{0}' is invalid.")]
     InvalidLanguage(String),
@@ -19,7 +19,7 @@ pub enum Error {
     PathNotFound(String),
 }
 
-impl Error {
+impl RuntimeError {
     /// Returns formatted error message as a String
     ///
     /// Useful for error reporting and logging. Marked `#[cold]` to hint to the

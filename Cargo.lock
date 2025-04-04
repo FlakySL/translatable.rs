@@ -227,6 +227,7 @@ version = "0.1.0"
 dependencies = [
  "thiserror",
  "translatable_proc",
+ "translatable_shared",
  "trybuild",
 ]
 
@@ -241,6 +242,7 @@ dependencies = [
  "syn",
  "thiserror",
  "toml",
+ "translatable_shared",
 ]
 
 [[package]]

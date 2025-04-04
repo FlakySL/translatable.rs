@@ -18,6 +18,7 @@ keywords = [
 [dependencies]
 thiserror = "2.0.12"
 translatable_proc = { path = "../translatable_proc" }
+translatable_shared = { path = "../translatable_shared/" }
 
 [dev-dependencies]
 trybuild = "1.0.104"
