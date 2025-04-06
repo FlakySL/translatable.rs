@@ -437,6 +437,6 @@ impl Into<TokenStream2> for Language {
     fn into(self) -> TokenStream2 {
         let ident = Ident::new(&format!("{self:?}"), Span::call_site());
 
-        quote! { translatable::Language::#ident }
+        quote! { translatable::shared::Language::#ident }
     }
 }

@@ -1,21 +1,19 @@
-use std::collections::HashMap;
 use std::fs::{read_dir, read_to_string};
 use std::sync::OnceLock;
 
-use thiserror::Error;
-use toml::{Table, Value};
+use toml::Table;
 
-use translatable_shared::{Language, NestingType};
+use translatable_shared::TranslationNode;
 
 use super::config::{SeekMode, TranslationOverlap, load_config};
-use crate::translations::errors::TranslationError;
+use crate::translations::errors::CompileTimeError;
 
 /// Translation association with its source file
 pub struct AssociatedTranslation {
     /// Original file path of the translation
     original_path: String,
     /// Hierarchical translation data
-    translation_table: NestingType,
+    translation_table: TranslationNode,
 }
 
 /// Global thread-safe cache for loaded translations
@@ -28,7 +26,7 @@ static TRANSLATIONS: OnceLock<Vec<AssociatedTranslation>> = OnceLock::new();
 ///
 /// # Returns
 /// Vec of file paths or TranslationError
-fn walk_dir(path: &str) -> Result<Vec<String>, TranslationError> {
+fn walk_dir(path: &str) -> Result<Vec<String>, CompileTimeError> {
     let mut stack = vec![path.to_string()];
     let mut result = Vec::new();
 
@@ -39,7 +37,7 @@ fn walk_dir(path: &str) -> Result<Vec<String>, TranslationError> {
         for entry in directory {
             let path = entry.path();
             if path.is_dir() {
-                stack.push(path.to_str().ok_or(TranslationError::InvalidUnicode)?.to_string());
+                stack.push(path.to_str().ok_or(CompileTimeError::InvalidUnicode)?.to_string());
             } else {
                 result.push(path.to_string_lossy().to_string());
             }
@@ -58,7 +56,7 @@ fn walk_dir(path: &str) -> Result<Vec<String>, TranslationError> {
 /// - Uses OnceLock for thread-safe initialization
 /// - Applies sorting based on configuration
 /// - Handles file parsing and validation
-pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, TranslationError> {
+pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, CompileTimeError> {
     if let Some(translations) = TRANSLATIONS.get() {
         return Ok(translations);
     }
@@ -77,15 +75,15 @@ pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, Transl
         .map(|path| {
             let table = read_to_string(path)?
                 .parse::<Table>()
-                .map_err(|err| TranslationError::ParseToml(err, path.clone()))?;
+                .map_err(|err| CompileTimeError::ParseToml(err, path.clone()))?;
 
             Ok(AssociatedTranslation {
                 original_path: path.to_string(),
-                translation_table: NestingType::try_from(table)
-                    .map_err(|err| TranslationError::InvalidTomlFormat(err, path.to_string()))?,
+                translation_table: TranslationNode::try_from(table)
+                    .map_err(|err| CompileTimeError::InvalidTomlFormat(err, path.to_string()))?,
             })
         })
-        .collect::<Result<Vec<_>, TranslationError>>()?;
+        .collect::<Result<Vec<_>, CompileTimeError>>()?;
 
     // Handle translation overlap configuration
     if let TranslationOverlap::Overwrite = config.overlap() {
@@ -105,7 +103,7 @@ impl AssociatedTranslation {
 
     /// Gets reference to the translation data structure
     #[allow(unused)]
-    pub fn translation_table(&self) -> &NestingType {
+    pub fn translation_table(&self) -> &TranslationNode {
         &self.translation_table
     }
 }

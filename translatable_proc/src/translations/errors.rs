@@ -4,13 +4,13 @@ use syn::Error as SynError;
 use thiserror::Error;
 use toml::de::Error as TomlError;
 
-use translatable_shared::{Language, TransformError};
+use translatable_shared::{Language, TranslationNodeError};
 
 use crate::data::config::ConfigError;
 
 /// Errors that can occur during translation processing.
 #[derive(Error, Debug)]
-pub enum TranslationError {
+pub enum CompileTimeError {
     /// Configuration-related error
     #[error("{0:#}")]
     Config(#[from] ConfigError),
@@ -59,7 +59,7 @@ pub enum TranslationError {
 
     /// Invalid TOML structure in specific file
     #[error("Invalid TOML structure in file {1}: {0}")]
-    InvalidTomlFormat(TransformError, String),
+    InvalidTomlFormat(TranslationNodeError, String),
 
     /// Path not found in any translation file
     #[error("The path '{0}' is not found in any of the translation files as a translation object.")]

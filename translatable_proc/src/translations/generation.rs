@@ -6,7 +6,7 @@ use syn::{Expr, parse2};
 
 use translatable_shared::Language;
 
-use super::errors::TranslationError;
+use super::errors::CompileTimeError;
 use crate::data::translations::load_translations;
 
 /// Generates compile-time string replacement logic for a single format
@@ -88,9 +88,9 @@ fn kwarg_dynamic_replaces(format_kwargs: &HashMap<String, TokenStream>) -> Vec<T
 /// # Returns
 /// - `Ok(Iso639a)` if valid language code
 /// - `Err(TranslationError)` if parsing fails
-pub fn load_lang_static(lang: &str) -> Result<Language, TranslationError> {
+pub fn load_lang_static(lang: &str) -> Result<Language, CompileTimeError> {
     lang.parse::<Language>()
-        .map_err(|_| TranslationError::InvalidLanguage(lang.to_string()))
+        .map_err(|_| CompileTimeError::InvalidLanguage(lang.to_string()))
 }
 
 /// Generates runtime validation for a dynamic language expression.
@@ -101,7 +101,7 @@ pub fn load_lang_static(lang: &str) -> Result<Language, TranslationError> {
 ///
 /// # Returns
 /// TokenStream with code to validate language at runtime
-pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationError> {
+pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, CompileTimeError> {
     let lang: Expr = parse2(lang)?;
 
     // The `String` explicit type serves as
@@ -114,8 +114,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
         let language = language.to_lowercase();
 
         #[doc(hidden)]
-        let valid_lang = translatable::Languages
-            .iter()
+        let valid_lang = translatable::shared::Language::iter()
             .any(|lang| lang.eq_ignore_ascii_case(&language));
     })
 }
@@ -132,18 +131,18 @@ pub fn load_translation_static(
     static_lang: Option<Language>,
     path: String,
     format_kwargs: HashMap<String, TokenStream>,
-) -> Result<TokenStream, TranslationError> {
+) -> Result<TokenStream, CompileTimeError> {
     let translation_object = load_translations()?
         .iter()
         .find_map(|association| association.translation_table().get_path(path.split('.').collect()))
-        .ok_or(TranslationError::PathNotFound(path.to_string()))?;
+        .ok_or(CompileTimeError::PathNotFound(path.to_string()))?;
     let replaces = kwarg_dynamic_replaces(&format_kwargs);
 
     Ok(match static_lang {
         Some(language) => {
             let translation = translation_object
                 .get(&language)
-                .ok_or(TranslationError::LanguageNotAvailable(language, path))?;
+                .ok_or(CompileTimeError::LanguageNotAvailable(language, path))?;
 
             let static_replaces = format_kwargs
                 .iter()
@@ -192,7 +191,7 @@ pub fn load_translation_dynamic(
     static_lang: Option<Language>,
     path: TokenStream,
     format_kwargs: HashMap<String, TokenStream>,
-) -> Result<TokenStream, TranslationError> {
+) -> Result<TokenStream, CompileTimeError> {
     let nestings = load_translations()?
         .iter()
         .map(|association| association.translation_table().clone().into())

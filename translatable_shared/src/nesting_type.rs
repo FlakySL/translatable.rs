@@ -10,7 +10,7 @@ use crate::Language;
 
 /// Errors occurring during TOML-to-translation structure transformation
 #[derive(Error, Debug)]
-pub enum TransformError {
+pub enum TranslationNodeError {
     /// Mixed content found in nesting node (strings and objects cannot coexist)
     #[error("A nesting can contain either strings or other nestings, but not both.")]
     InvalidNesting,
@@ -31,14 +31,14 @@ pub enum TransformError {
 /// Represents nested translation structure,
 /// as it is on the translation files.
 #[derive(Clone)]
-pub enum NestingType {
+pub enum TranslationNode {
     /// Nested namespace containing other translation objects
-    Object(HashMap<String, NestingType>),
+    Nesting(HashMap<String, TranslationNode>),
     /// Leaf node containing actual translations per language
     Translation(HashMap<Language, String>),
 }
 
-impl NestingType {
+impl TranslationNode {
     /// Resolves a translation path through the nesting hierarchy
     ///
     /// # Arguments
@@ -48,7 +48,7 @@ impl NestingType {
     /// Reference to translations if path exists and points to leaf node
     pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<Language, String>> {
         match self {
-            Self::Object(nested) => {
+            Self::Nesting(nested) => {
                 let (first, rest) = path.split_first()?;
                 nested.get(*first)?.get_path(rest.to_vec())
             },
@@ -62,10 +62,10 @@ impl NestingType {
 ///
 /// This is exclusively meant to be used from the
 /// macro generation context.
-impl Into<TokenStream2> for NestingType {
-    fn into(self) -> TokenStream2 {
-        match self {
-            Self::Object(nesting) => {
+impl From<TranslationNode> for TokenStream2 {
+    fn from(val: TranslationNode) -> Self {
+        match val {
+            TranslationNode::Nesting(nesting) => {
                 let mapped_nesting = nesting
                     .into_iter()
                     .map(|(key, value)| {
@@ -75,7 +75,7 @@ impl Into<TokenStream2> for NestingType {
                     .collect::<Vec<_>>();
 
                 quote! {{
-                    translatable::NestingType::Object(
+                    translatable::TranslationNode::Nesting(
                         vec![#(#mapped_nesting),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
@@ -83,7 +83,7 @@ impl Into<TokenStream2> for NestingType {
                 }}
             }
 
-            Self::Translation(translation) => {
+            TranslationNode::Translation(translation) => {
                 let mapped_translation = translation
                     .into_iter()
                     .map(|(key, value)| {
@@ -93,7 +93,7 @@ impl Into<TokenStream2> for NestingType {
                     .collect::<Vec<_>>();
 
                 quote! {{
-                    translatable::NestingType::Translation(
+                    translatable::TranslationNode::Translation(
                         vec![#(#mapped_translation),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
@@ -121,8 +121,8 @@ fn templates_valid(translation: &str) -> bool {
 
 /// This implementation converts a `toml::Table` into a manageable
 /// NestingType.
-impl TryFrom<Table> for NestingType {
-    type Error = TransformError;
+impl TryFrom<Table> for TranslationNode {
+    type Error = TranslationNodeError;
 
     /// Converts TOML table to validated translation structure
     fn try_from(value: Table) -> Result<Self, Self::Error> {
@@ -137,29 +137,30 @@ impl TryFrom<Table> for NestingType {
                     match result {
                         Self::Translation(translation) => {
                             if !templates_valid(&translation_value) {
-                                return Err(TransformError::UnclosedTemplate);
+                                return Err(TranslationNodeError::UnclosedTemplate);
                             }
                             translation.insert(key.parse()?, translation_value);
-                        },
-                        Self::Object(_) => return Err(TransformError::InvalidNesting),
+                        }
+
+                        Self::Nesting(_) => return Err(TranslationNodeError::InvalidNesting),
                     }
                 },
 
                 Value::Table(nesting_value) => {
-                    let result = result.get_or_insert_with(|| Self::Object(HashMap::new()));
+                    let result = result.get_or_insert_with(|| Self::Nesting(HashMap::new()));
 
                     match result {
-                        Self::Object(nesting) => {
+                        Self::Nesting(nesting) => {
                             nesting.insert(key, Self::try_from(nesting_value)?);
                         },
-                        Self::Translation(_) => return Err(TransformError::InvalidNesting),
+                        Self::Translation(_) => return Err(TranslationNodeError::InvalidNesting),
                     }
                 },
 
-                _ => return Err(TransformError::InvalidValue),
+                _ => return Err(TranslationNodeError::InvalidValue),
             }
         }
 
-        result.ok_or(TransformError::InvalidValue)
+        result.ok_or(TranslationNodeError::InvalidValue)
     }
 }

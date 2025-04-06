@@ -1,3 +1,4 @@
+use strum::IntoEnumIterator;
 use translatable::translation;
 
 #[test]
