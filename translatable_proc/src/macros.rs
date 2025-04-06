@@ -7,11 +7,24 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::Static;
 use syn::{
-    Expr, ExprLit, ExprPath, Ident, Lit, MetaNameValue, Path, Result as SynResult, Token,
+    Expr,
+    ExprLit,
+    ExprPath,
+    Ident,
+    Lit,
+    MetaNameValue,
+    Path,
+    Result as SynResult,
+    Token,
     parse_quote,
 };
 
-use crate::macro_generation::single::{load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static};
+use crate::macro_generation::single::{
+    load_lang_dynamic,
+    load_lang_static,
+    load_translation_dynamic,
+    load_translation_static,
+};
 
 /// Represents raw input arguments for the translation macro
 ///

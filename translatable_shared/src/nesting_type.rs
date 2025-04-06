@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
+use strum::ParseError;
 use thiserror::Error;
 use toml::{Table, Value};
-use strum::ParseError;
 
 use crate::Language;
 
@@ -81,7 +81,7 @@ impl From<TranslationNode> for TokenStream2 {
                             .collect::<std::collections::HashMap<_, _>>()
                     )
                 }}
-            }
+            },
 
             TranslationNode::Translation(translation) => {
                 let mapped_translation = translation
@@ -99,7 +99,7 @@ impl From<TranslationNode> for TokenStream2 {
                             .collect::<std::collections::HashMap<_, _>>()
                     )
                 }}
-            }
+            },
         }
     }
 }
@@ -140,7 +140,7 @@ impl TryFrom<Table> for TranslationNode {
                                 return Err(TranslationNodeError::UnclosedTemplate);
                             }
                             translation.insert(key.parse()?, translation_value);
-                        }
+                        },
 
                         Self::Nesting(_) => return Err(TranslationNodeError::InvalidNesting),
                     }

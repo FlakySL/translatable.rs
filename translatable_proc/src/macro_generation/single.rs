@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Expr, parse2};
-
 use translatable_shared::Language;
 
 use super::compile_error::CompileTimeError;
@@ -89,8 +88,7 @@ fn kwarg_dynamic_replaces(format_kwargs: &HashMap<String, TokenStream>) -> Vec<T
 /// - `Ok(Iso639a)` if valid language code
 /// - `Err(TranslationError)` if parsing fails
 pub fn load_lang_static(lang: &str) -> Result<Language, CompileTimeError> {
-    lang.parse::<Language>()
-        .map_err(|_| CompileTimeError::InvalidLanguage(lang.to_string()))
+    lang.parse::<Language>().map_err(|_| CompileTimeError::InvalidLanguage(lang.to_string()))
 }
 
 /// Generates runtime validation for a dynamic language expression.

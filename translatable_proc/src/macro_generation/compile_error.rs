@@ -3,7 +3,6 @@ use std::io::Error as IoError;
 use syn::Error as SynError;
 use thiserror::Error;
 use toml::de::Error as TomlError;
-
 use translatable_shared::{Language, TranslationNodeError};
 
 use crate::data::config::ConfigError;

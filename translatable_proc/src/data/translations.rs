@@ -2,11 +2,10 @@ use std::fs::{read_dir, read_to_string};
 use std::sync::OnceLock;
 
 use toml::Table;
-
 use translatable_shared::TranslationNode;
 
 use super::config::{SeekMode, TranslationOverlap, load_config};
-use crate::translations::compile_error::CompileTimeError;
+use crate::macro_generation::compile_error::CompileTimeError;
 
 /// Translation association with its source file
 pub struct AssociatedTranslation {
@@ -92,7 +91,6 @@ pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, Compil
 
     Ok(TRANSLATIONS.get_or_init(|| translations))
 }
-
 
 impl AssociatedTranslation {
     /// Gets the original file path of the translation
