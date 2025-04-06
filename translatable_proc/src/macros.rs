@@ -11,9 +11,7 @@ use syn::{
     parse_quote,
 };
 
-use crate::translations::generation::{
-    load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static,
-};
+use crate::macro_generation::single::{load_lang_dynamic, load_lang_static, load_translation_dynamic, load_translation_static};
 
 /// Represents raw input arguments for the translation macro
 ///

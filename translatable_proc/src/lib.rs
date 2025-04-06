@@ -13,7 +13,7 @@ use syn::parse_macro_input;
 
 mod data;
 mod macros;
-mod translations;
+mod macro_generation;
 
 /// Procedural macro for compile-time translation validation
 ///

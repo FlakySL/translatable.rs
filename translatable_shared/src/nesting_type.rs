@@ -75,7 +75,7 @@ impl From<TranslationNode> for TokenStream2 {
                     .collect::<Vec<_>>();
 
                 quote! {{
-                    translatable::TranslationNode::Nesting(
+                    translatable::shared::TranslationNode::Nesting(
                         vec![#(#mapped_nesting),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
@@ -93,7 +93,7 @@ impl From<TranslationNode> for TokenStream2 {
                     .collect::<Vec<_>>();
 
                 quote! {{
-                    translatable::TranslationNode::Translation(
+                    translatable::shared::TranslationNode::Translation(
                         vec![#(#mapped_translation),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()

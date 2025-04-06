@@ -6,7 +6,7 @@ use toml::Table;
 use translatable_shared::TranslationNode;
 
 use super::config::{SeekMode, TranslationOverlap, load_config};
-use crate::translations::errors::CompileTimeError;
+use crate::translations::compile_error::CompileTimeError;
 
 /// Translation association with its source file
 pub struct AssociatedTranslation {

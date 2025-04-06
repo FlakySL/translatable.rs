@@ -6,7 +6,7 @@ use syn::{Expr, parse2};
 
 use translatable_shared::Language;
 
-use super::errors::CompileTimeError;
+use super::compile_error::CompileTimeError;
 use crate::data::translations::load_translations;
 
 /// Generates compile-time string replacement logic for a single format
@@ -115,7 +115,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, CompileTimeEr
 
         #[doc(hidden)]
         let valid_lang = translatable::shared::Language::iter()
-            .any(|lang| lang.eq_ignore_ascii_case(&language));
+            .any(|lang| lang == language);
     })
 }
 
