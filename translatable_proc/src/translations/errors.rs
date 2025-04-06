@@ -4,9 +4,9 @@ use syn::Error as SynError;
 use thiserror::Error;
 use toml::de::Error as TomlError;
 
+use translatable_shared::{Language, TransformError};
+
 use crate::data::config::ConfigError;
-use crate::data::translations::TransformError;
-use crate::languages::Iso639a;
 
 /// Errors that can occur during translation processing.
 #[derive(Error, Debug)]
@@ -37,7 +37,7 @@ pub enum TranslationError {
     #[error(
         "'{0}' is not valid ISO 639-1. {similarities}",
         similarities = {
-            let similarities = Iso639a::get_similarities(.0, 10);
+            let similarities = Language::get_similarities(.0, 10);
             let similarities_format = similarities
                 .similarities()
                 .join("\n");
@@ -67,7 +67,7 @@ pub enum TranslationError {
 
     /// Language not available for the specified path
     #[error("The language '{0:?}' ({0:#}) is not available for the '{1}' translation.")]
-    LanguageNotAvailable(Iso639a, String),
+    LanguageNotAvailable(Language, String),
 
     /// Error parsing macro.
     #[error("Error parsing macro.")]

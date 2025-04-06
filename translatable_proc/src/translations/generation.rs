@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use strum::IntoEnumIterator;
 use syn::{Expr, parse2};
 
 use translatable_shared::Language;
@@ -105,14 +104,6 @@ pub fn load_lang_static(lang: &str) -> Result<Language, TranslationError> {
 pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationError> {
     let lang: Expr = parse2(lang)?;
 
-    // Generate list of available language codes
-    let available_langs = Language::iter()
-        .map(|language| {
-            let language = format!("{language:?}");
-
-            quote! { #language, }
-        });
-
     // The `String` explicit type serves as
     // expression type checking, we accept `impl Into<String>`
     // for any expression that's not static.
@@ -123,7 +114,7 @@ pub fn load_lang_dynamic(lang: TokenStream) -> Result<TokenStream, TranslationEr
         let language = language.to_lowercase();
 
         #[doc(hidden)]
-        let valid_lang = vec![#(#available_langs)*]
+        let valid_lang = translatable::Languages
             .iter()
             .any(|lang| lang.eq_ignore_ascii_case(&language));
     })
@@ -198,7 +189,7 @@ pub fn load_translation_static(
 /// # Returns
 /// TokenStream with runtime translation resolution logic
 pub fn load_translation_dynamic(
-    static_lang: Option<Iso639a>,
+    static_lang: Option<Language>,
     path: TokenStream,
     format_kwargs: HashMap<String, TokenStream>,
 ) -> Result<TokenStream, TranslationError> {

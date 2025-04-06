@@ -1,4 +1,7 @@
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::quote;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
+use syn::Ident;
 
 /// ISO 639-1 language code implementation with validation
 ///
@@ -422,5 +425,18 @@ impl Language {
 impl PartialEq<String> for Language {
     fn eq(&self, other: &String) -> bool {
         format!("{self:?}").to_lowercase() == other.to_lowercase()
+    }
+}
+
+/// This implementation converts the tagged union
+/// to an equivalent call from the runtime context.
+///
+/// This is exclusively meant to be used from the
+/// macro generation context.
+impl Into<TokenStream2> for Language {
+    fn into(self) -> TokenStream2 {
+        let ident = Ident::new(&format!("{self:?}"), Span::call_site());
+
+        quote! { translatable::Language::#ident }
     }
 }
