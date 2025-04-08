@@ -19,7 +19,7 @@ use syn::{
     parse_quote,
 };
 
-use crate::macro_generation::single::{
+use crate::macro_generation::translation::{
     load_lang_dynamic,
     load_lang_static,
     load_translation_dynamic,

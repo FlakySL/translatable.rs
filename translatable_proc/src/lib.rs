@@ -7,13 +7,14 @@
 //! - Configurable loading strategies
 //! - Procedural macro for compile-time checking
 
-use macros::{RawMacroArgs, translation_macro};
+use macro_parsing_old::{RawMacroArgs, translation_macro};
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
 mod data;
 mod macro_generation;
-mod macros;
+mod macro_input;
+mod macro_parsing_old;
 
 /// Procedural macro for compile-time translation validation
 ///
