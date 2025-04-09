@@ -11,5 +11,11 @@ pub use translatable_proc::translation;
 pub mod shared {
     pub use strum::IntoEnumIterator;
     /// Re-export utils used for both runtime and compile-time
-    pub use translatable_shared::{Language, LanguageIter, TranslationNode};
+    pub use translatable_shared::{
+        Language,
+        LanguageIter,
+        TranslationNode,
+        TranslationNodeCollection,
+        TranslationNodeError,
+    };
 }

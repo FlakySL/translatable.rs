@@ -133,3 +133,23 @@ impl Parse for TranslationMacroArgs {
         })
     }
 }
+
+impl TranslationMacroArgs {
+    #[inline]
+    #[allow(unused)]
+    pub fn language(&self) -> &InputType<Language> {
+        &self.language
+    }
+
+    #[inline]
+    #[allow(unused)]
+    pub fn path(&self) -> &InputType<Vec<String>> {
+        &self.path
+    }
+
+    #[inline]
+    #[allow(unused)]
+    pub fn replacements(&self) -> &HashMap<String, TokenStream2> {
+        &self.replacements
+    }
+}

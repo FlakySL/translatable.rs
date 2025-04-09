@@ -7,14 +7,17 @@
 //! - Configurable loading strategies
 //! - Procedural macro for compile-time checking
 
-use macro_parsing_old::{RawMacroArgs, translation_macro};
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
+
+
+use crate::macro_input::translation::TranslationMacroArgs;
+use crate::macro_generation::translation::translation_macro;
 
 mod data;
 mod macro_generation;
 mod macro_input;
-mod macro_parsing_old;
+mod utils;
 
 /// Procedural macro for compile-time translation validation
 ///
@@ -28,5 +31,5 @@ mod macro_parsing_old;
 /// - Translation path (supports static analysis)
 #[proc_macro]
 pub fn translation(input: TokenStream) -> TokenStream {
-    translation_macro(parse_macro_input!(input as RawMacroArgs).into()).into()
+    translation_macro(parse_macro_input!(input as TranslationMacroArgs).into()).into()
 }

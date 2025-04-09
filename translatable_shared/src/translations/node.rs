@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 use strum::ParseError;
 use thiserror::Error;
 use toml::{Table, Value};

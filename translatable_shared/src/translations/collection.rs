@@ -1,4 +1,9 @@
-use super::node::{TranslationNesting, TranslationObject};
+use std::collections::HashMap;
+
+use proc_macro2::TokenStream as TokenStream2;
+use quote::{ToTokens, TokenStreamExt, quote};
+
+use super::node::TranslationObject;
 use crate::TranslationNode;
 
 /// Wraps a collection of translation nodes, these translation nodes
@@ -7,7 +12,7 @@ use crate::TranslationNode;
 /// permits searching for translations by iterating all the files
 /// in the specified configuration order, so most likely you don't
 /// need to seek for a translation independently.
-pub struct TranslationNodeCollection(TranslationNesting);
+pub struct TranslationNodeCollection(HashMap<String, TranslationNode>);
 
 impl TranslationNodeCollection {
     /// This method may be used to load a translation
@@ -48,5 +53,26 @@ impl TranslationNodeCollection {
 impl FromIterator<(String, TranslationNode)> for TranslationNodeCollection {
     fn from_iter<T: IntoIterator<Item = (String, TranslationNode)>>(iter: T) -> Self {
         Self(iter.into_iter().collect())
+    }
+}
+
+impl ToTokens for TranslationNodeCollection {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        let node_collection = self.0.iter().map(|(key, value)| {
+            let key = key.to_token_stream();
+            let value = value.to_token_stream();
+
+            quote! {
+                (#key.to_string(), #value)
+            }
+        });
+
+        tokens.append_all(quote! {
+            translatable::shared::TranslationNodeCollection(
+                vec![#(#node_collection),*]
+                    .iter()
+                    .collect()
+            )
+        });
     }
 }

@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use thiserror::Error;
+use translatable_shared::{Language, TranslationNodeError};
 
 /// Error type for translation resolution failures
 ///
@@ -6,17 +9,14 @@ use thiserror::Error;
 /// For static resolution failures, errors are reported at compile time.
 #[derive(Error, Debug)]
 pub enum RuntimeError {
-    /// Invalid ISO 639-1 language code provided
-    #[error("The language '{0}' is invalid.")]
-    InvalidLanguage(String),
+    #[error("{0:#}")]
+    TranslationNode(#[from] TranslationNodeError),
 
-    /// Translation exists but not available for specified language
-    #[error("The langauge '{0}' is not available for the path '{1}'")]
-    LanguageNotAvailable(String, String),
-
-    /// Requested translation path doesn't exist in any translation files
-    #[error("The path '{0}' was not found in any of the translations files.")]
+    #[error("The path '{0}' could not be found")]
     PathNotFound(String),
+
+    #[error("The language '{0:?}' ('{0:#}') is not available for the path '{1}'")]
+    LanguageNotAvailable(Language, String),
 }
 
 impl RuntimeError {

@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use syn::Ident;
 
