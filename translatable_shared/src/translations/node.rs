@@ -28,14 +28,17 @@ pub enum TranslationNodeError {
     LanguageParsing(#[from] ParseError),
 }
 
+pub type TranslationNesting = HashMap<String, TranslationNode>;
+pub type TranslationObject = HashMap<Language, String>;
+
 /// Represents nested translation structure,
 /// as it is on the translation files.
 #[derive(Clone)]
 pub enum TranslationNode {
     /// Nested namespace containing other translation objects
-    Nesting(HashMap<String, TranslationNode>),
+    Nesting(TranslationNesting),
     /// Leaf node containing actual translations per language
-    Translation(HashMap<Language, String>),
+    Translation(TranslationObject),
 }
 
 impl TranslationNode {
@@ -46,11 +49,11 @@ impl TranslationNode {
     ///
     /// # Returns
     /// Reference to translations if path exists and points to leaf node
-    pub fn get_path(&self, path: Vec<&str>) -> Option<&HashMap<Language, String>> {
+    pub fn find_path(&self, path: &[&str]) -> Option<&TranslationObject> {
         match self {
             Self::Nesting(nested) => {
                 let (first, rest) = path.split_first()?;
-                nested.get(*first)?.get_path(rest.to_vec())
+                nested.get(*first)?.find_path(rest)
             },
             Self::Translation(translation) => path.is_empty().then_some(translation),
         }

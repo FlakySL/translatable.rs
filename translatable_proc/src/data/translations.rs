@@ -1,22 +1,59 @@
 use std::fs::{read_dir, read_to_string};
+use std::io::Error as IoError;
 use std::sync::OnceLock;
 
+use thiserror::Error;
 use toml::Table;
-use translatable_shared::TranslationNode;
+use toml::de::Error as TomlError;
+use translatable_shared::{TranslationNode, TranslationNodeCollection, TranslationNodeError};
 
-use super::config::{SeekMode, TranslationOverlap, load_config};
-use crate::macro_generation::compile_error::CompileTimeError;
+use super::config::{ConfigError, SeekMode, TranslationOverlap, load_config};
 
-/// Translation association with its source file
-pub struct AssociatedTranslation {
-    /// Original file path of the translation
-    original_path: String,
-    /// Hierarchical translation data
-    translation_table: TranslationNode,
+/// Contains error definitions for what may go wrong while
+/// loading a translation.
+#[derive(Error, Debug)]
+pub enum TranslationDataError {
+    /// Represents a generic IO error, if a file couldn't
+    /// be opened, a path could not be found... This error
+    /// will be inferred from an `std::io::Error`.
+    #[error("There was a problem with an IO operation: {0:#}")]
+    SystemIo(#[from] IoError),
+
+    /// Used to convert any configuration loading error
+    /// into a `TranslationDataError`, error messages are
+    /// handled by the `ConfigError` itself.
+    #[error("{0:#}")]
+    LoadConfig(#[from] ConfigError),
+
+    /// Specific conversion error for when a path can't be converted
+    /// to a manipulable string because it contains invalid
+    /// unicode characters.
+    #[error("Couldn't open path, found invalid unicode characters")]
+    InvalidUnicode,
+
+    /// Represents a TOML deserialization error, this happens while
+    /// loading files and converting their content to TOML.
+    ///
+    /// # Arguments
+    /// * `.0` - The RAW toml::de::Error returned by the deserialization
+    /// function.
+    /// * `.1` - The path where the file was originally found.
+    #[error(
+        "TOML Deserialization error '{reason}' {span} in {1}",
+        reason = _0.message(),
+        span = _0
+            .span()
+       .map(|range| format!("on {}:{}", range.start, range.end))
+            .unwrap_or_else(|| String::new())
+    )]
+    ParseToml(TomlError, String),
+
+    #[error("{0:#}")]
+    Node(#[from] TranslationNodeError),
 }
 
 /// Global thread-safe cache for loaded translations
-static TRANSLATIONS: OnceLock<Vec<AssociatedTranslation>> = OnceLock::new();
+static TRANSLATIONS: OnceLock<TranslationNodeCollection> = OnceLock::new();
 
 /// Recursively walks directory to find all translation files
 ///
@@ -25,7 +62,7 @@ static TRANSLATIONS: OnceLock<Vec<AssociatedTranslation>> = OnceLock::new();
 ///
 /// # Returns
 /// Vec of file paths or TranslationError
-fn walk_dir(path: &str) -> Result<Vec<String>, CompileTimeError> {
+fn walk_dir(path: &str) -> Result<Vec<String>, TranslationDataError> {
     let mut stack = vec![path.to_string()];
     let mut result = Vec::new();
 
@@ -36,7 +73,7 @@ fn walk_dir(path: &str) -> Result<Vec<String>, CompileTimeError> {
         for entry in directory {
             let path = entry.path();
             if path.is_dir() {
-                stack.push(path.to_str().ok_or(CompileTimeError::InvalidUnicode)?.to_string());
+                stack.push(path.to_str().ok_or(TranslationDataError::InvalidUnicode)?.to_string());
             } else {
                 result.push(path.to_string_lossy().to_string());
             }
@@ -55,7 +92,7 @@ fn walk_dir(path: &str) -> Result<Vec<String>, CompileTimeError> {
 /// - Uses OnceLock for thread-safe initialization
 /// - Applies sorting based on configuration
 /// - Handles file parsing and validation
-pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, CompileTimeError> {
+pub fn load_translations() -> Result<&'static TranslationNodeCollection, TranslationDataError> {
     if let Some(translations) = TRANSLATIONS.get() {
         return Ok(translations);
     }
@@ -65,43 +102,22 @@ pub fn load_translations() -> Result<&'static Vec<AssociatedTranslation>, Compil
 
     // Apply sorting based on configuration
     translation_paths.sort_by_key(|path| path.to_lowercase());
-    if let SeekMode::Unalphabetical = config.seek_mode() {
+    if matches!(config.seek_mode(), SeekMode::Unalphabetical)
+        || matches!(config.overlap(), TranslationOverlap::Overwrite)
+    {
         translation_paths.reverse();
     }
 
-    let mut translations = translation_paths
+    let translations = translation_paths
         .iter()
         .map(|path| {
             let table = read_to_string(path)?
                 .parse::<Table>()
-                .map_err(|err| CompileTimeError::ParseToml(err, path.clone()))?;
+                .map_err(|err| TranslationDataError::ParseToml(err, path.clone()))?;
 
-            Ok(AssociatedTranslation {
-                original_path: path.to_string(),
-                translation_table: TranslationNode::try_from(table)
-                    .map_err(|err| CompileTimeError::InvalidTomlFormat(err, path.to_string()))?,
-            })
+            Ok((path.clone(), TranslationNode::try_from(table)?))
         })
-        .collect::<Result<Vec<_>, CompileTimeError>>()?;
-
-    // Handle translation overlap configuration
-    if let TranslationOverlap::Overwrite = config.overlap() {
-        translations.reverse();
-    }
+        .collect::<Result<TranslationNodeCollection, TranslationDataError>>()?;
 
     Ok(TRANSLATIONS.get_or_init(|| translations))
-}
-
-impl AssociatedTranslation {
-    /// Gets the original file path of the translation
-    #[allow(unused)]
-    pub fn original_path(&self) -> &str {
-        &self.original_path
-    }
-
-    /// Gets reference to the translation data structure
-    #[allow(unused)]
-    pub fn translation_table(&self) -> &TranslationNode {
-        &self.translation_table
-    }
 }

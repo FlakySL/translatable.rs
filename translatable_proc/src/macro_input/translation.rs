@@ -2,9 +2,18 @@ use std::collections::HashMap;
 
 use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
-use syn::token::Static;
-use syn::{parse2, Error as SynError, LitStr, Path, PathArguments, Result as SynResult, Token, Ident};
 use syn::parse::{Parse, ParseStream};
+use syn::token::Static;
+use syn::{
+    Error as SynError,
+    Ident,
+    LitStr,
+    Path,
+    PathArguments,
+    Result as SynResult,
+    Token,
+    parse2,
+};
 use thiserror::Error;
 use translatable_shared::Language;
 
@@ -26,7 +35,7 @@ enum TranslationMacroArgsError {
     /// Extra tokens were found while parsing a static path for
     /// the `translation!` macro, specifically generic arguments.
     #[error("This translation path contains generic arguments, and cannot be parsed")]
-    InvalidPathContainsGenerics
+    InvalidPathContainsGenerics,
 }
 
 /// The `TranslationMacroArgs` struct is used to represent
@@ -73,13 +82,11 @@ impl Parse for TranslationMacroArgs {
             Ok(literal) => match literal.value().parse::<Language>() {
                 Ok(language) => InputType::Static(language),
 
-                Err(_) => Err(
-                    TranslationMacroArgsError::InvalidIsoLiteral(literal.value())
-                        .into_syn_error(literal)
-                    )?
+                Err(_) => Err(TranslationMacroArgsError::InvalidIsoLiteral(literal.value())
+                    .into_syn_error(literal))?,
             },
 
-            Err(_) => InputType::Dynamic(language_arg)
+            Err(_) => InputType::Dynamic(language_arg),
         };
 
         input.parse::<Token![,]>()?;
@@ -87,23 +94,22 @@ impl Parse for TranslationMacroArgs {
         let next_token = input.parse::<TokenStream2>()?;
         let parsed_path_arg = match parse2::<Static>(next_token.clone()) {
             Ok(_) => {
-                let language_arg = input.parse::<Path>()?
+                let language_arg = input
+                    .parse::<Path>()?
                     .segments
                     .into_iter()
                     .map(|segment| match segment.arguments {
                         PathArguments::None => Ok(segment.ident.to_string()),
 
-                        other => Err(
-                            TranslationMacroArgsError::InvalidPathContainsGenerics
-                                .into_syn_error(other)
-                        ),
+                        other => Err(TranslationMacroArgsError::InvalidPathContainsGenerics
+                            .into_syn_error(other)),
                     })
                     .collect::<Result<Vec<_>, _>>()?;
 
                 InputType::Static(language_arg)
-            }
+            },
 
-            Err(_) => InputType::Dynamic(next_token)
+            Err(_) => InputType::Dynamic(next_token),
         };
 
         let mut replacements = HashMap::new();
@@ -113,9 +119,7 @@ impl Parse for TranslationMacroArgs {
                 let value = match input.parse::<Token![=]>() {
                     Ok(_) => input.parse::<TokenStream2>()?,
 
-                    Err(_) => key
-                        .clone()
-                        .into_token_stream()
+                    Err(_) => key.clone().into_token_stream(),
                 };
 
                 replacements.insert(key.to_string(), value);
@@ -125,7 +129,7 @@ impl Parse for TranslationMacroArgs {
         Ok(Self {
             language: parsed_langauge_arg,
             path: parsed_path_arg,
-            replacements
+            replacements,
         })
     }
 }
