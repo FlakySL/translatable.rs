@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::quote;
+use quote::{quote, ToTokens, TokenStreamExt};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use syn::Ident;
 
@@ -433,10 +433,10 @@ impl PartialEq<String> for Language {
 ///
 /// This is exclusively meant to be used from the
 /// macro generation context.
-impl Into<TokenStream2> for Language {
-    fn into(self) -> TokenStream2 {
+impl ToTokens for Language {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
         let ident = Ident::new(&format!("{self:?}"), Span::call_site());
 
-        quote! { translatable::shared::Language::#ident }
+        tokens.append_all(quote! { translatable::shared::Language::#ident })
     }
 }

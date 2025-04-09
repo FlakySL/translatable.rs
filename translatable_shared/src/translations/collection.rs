@@ -38,7 +38,7 @@ impl TranslationNodeCollection {
     /// # Returns
     /// A translation object containing a specific translation
     /// in all it's available languages.
-    pub fn find_path(&self, path: &[&str]) -> Option<&TranslationObject> {
+    pub fn find_path(&self, path: &Vec<String>) -> Option<&TranslationObject> {
         self.0.values().find_map(|node| node.find_path(path))
     }
 }

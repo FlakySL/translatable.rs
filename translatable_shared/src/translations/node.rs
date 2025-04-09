@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
+use quote::{quote, ToTokens, TokenStreamExt};
 use strum::ParseError;
 use thiserror::Error;
 use toml::{Table, Value};
@@ -49,11 +49,11 @@ impl TranslationNode {
     ///
     /// # Returns
     /// Reference to translations if path exists and points to leaf node
-    pub fn find_path(&self, path: &[&str]) -> Option<&TranslationObject> {
+    pub fn find_path(&self, path: &Vec<String>) -> Option<&TranslationObject> {
         match self {
             Self::Nesting(nested) => {
                 let (first, rest) = path.split_first()?;
-                nested.get(*first)?.find_path(rest)
+                nested.get(first)?.find_path(&rest.to_vec())
             },
             Self::Translation(translation) => path.is_empty().then_some(translation),
         }
@@ -65,43 +65,43 @@ impl TranslationNode {
 ///
 /// This is exclusively meant to be used from the
 /// macro generation context.
-impl From<TranslationNode> for TokenStream2 {
-    fn from(val: TranslationNode) -> Self {
-        match val {
+impl ToTokens for TranslationNode {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
             TranslationNode::Nesting(nesting) => {
                 let mapped_nesting = nesting
                     .into_iter()
                     .map(|(key, value)| {
-                        let value: TokenStream2 = value.into();
+                        let value = value.to_token_stream();
                         quote! { (#key, #value) }
                     })
                     .collect::<Vec<_>>();
 
-                quote! {{
+                tokens.append_all(quote! {{
                     translatable::shared::TranslationNode::Nesting(
                         vec![#(#mapped_nesting),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
                     )
-                }}
+                }});
             },
 
             TranslationNode::Translation(translation) => {
                 let mapped_translation = translation
                     .into_iter()
                     .map(|(key, value)| {
-                        let key: TokenStream2 = key.into();
+                        let key = key.into_token_stream();
                         quote! { (#key, #value) }
                     })
                     .collect::<Vec<_>>();
 
-                quote! {{
+                tokens.append_all(quote! {{
                     translatable::shared::TranslationNode::Translation(
                         vec![#(#mapped_translation),*]
                             .into_iter()
                             .collect::<std::collections::HashMap<_, _>>()
                     )
-                }}
+                }});
             },
         }
     }
