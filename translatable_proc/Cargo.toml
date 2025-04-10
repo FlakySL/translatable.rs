@@ -18,3 +18,4 @@ strum = { version = "0.27.1", features = ["derive"] }
 syn = { version = "2.0.98", features = ["full"] }
 thiserror = "2.0.11"
 toml = "0.8.20"
+translatable_shared = { path = "../translatable_shared/" }

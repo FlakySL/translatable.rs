@@ -17,6 +17,7 @@ imports_granularity = "Module"
 group_imports = "StdExternalCrate"
 reorder_imports = true
 reorder_modules = true
+imports_layout = "HorizontalVertical"
 
 # Wrapping & line breaking
 wrap_comments = true

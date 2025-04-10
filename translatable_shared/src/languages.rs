@@ -1,4 +1,7 @@
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::{ToTokens, TokenStreamExt, quote};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
+use syn::Ident;
 
 /// ISO 639-1 language code implementation with validation
 ///
@@ -8,7 +11,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 /// - Complete ISO 639-1 coverage
 #[derive(Debug, Clone, EnumIter, Display, EnumString, Eq, Hash, PartialEq)]
 #[strum(ascii_case_insensitive)]
-pub enum Iso639a {
+pub enum Language {
     #[strum(serialize = "Abkhazian", serialize = "ab")]
     AB,
     #[strum(serialize = "Afar", serialize = "aa")]
@@ -395,7 +398,7 @@ impl<T: Sized> Similarities<T> {
     }
 }
 
-impl Iso639a {
+impl Language {
     /// This method returns a list of similar languages to the provided one.
     pub fn get_similarities(lang: &str, max_amount: usize) -> Similarities<String> {
         let all_similarities = Self::iter()
@@ -419,8 +422,21 @@ impl Iso639a {
     }
 }
 
-impl PartialEq<String> for Iso639a {
+impl PartialEq<String> for Language {
     fn eq(&self, other: &String) -> bool {
         format!("{self:?}").to_lowercase() == other.to_lowercase()
+    }
+}
+
+/// This implementation converts the tagged union
+/// to an equivalent call from the runtime context.
+///
+/// This is exclusively meant to be used from the
+/// macro generation context.
+impl ToTokens for Language {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        let ident = Ident::new(&format!("{self:?}"), Span::call_site());
+
+        tokens.append_all(quote! { translatable::shared::Language::#ident })
     }
 }
