@@ -1,4 +1,3 @@
-
 # Governance and Moderation
 
 This project is mainly maintained by the authors listed in both `translatable/Cargo.toml` and `translatable_proc/Cargo.toml`.

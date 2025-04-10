@@ -3,14 +3,15 @@
 //! This module provides functionality to load and manage configuration
 //! settings for localization/translation workflows from a TOML file.
 
+use std::env::var;
 use std::fs::read_to_string;
 use std::io::Error as IoError;
 use std::sync::OnceLock;
 
-use serde::Deserialize;
+use strum::EnumString;
 use thiserror::Error;
+use toml::Table;
 use toml::de::Error as TomlError;
-use toml::from_str as toml_from_str;
 
 /// Errors that can occur during configuration loading
 #[derive(Error, Debug)]
@@ -27,22 +28,14 @@ pub enum ConfigError {
             .unwrap_or_else(|| "".into())
     )]
     ParseToml(#[from] TomlError),
-}
 
-/// Wrapper type for locales directory path with validation
-#[derive(Deserialize)]
-pub struct LocalesPath(String);
-
-impl Default for LocalesPath {
-    /// Default path to translations directory
-    fn default() -> Self {
-        LocalesPath("./translations".into())
-    }
+    /// Invalid environment variable value for configuration options
+    #[error("Couldn't parse configuration entry '{1}' for '{0}'")]
+    InvalidValue(String, String),
 }
 
 /// File search order strategy
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
+#[derive(Default, Clone, Copy, EnumString)]
 pub enum SeekMode {
     /// Alphabetical order (default)
     #[default]
@@ -53,8 +46,7 @@ pub enum SeekMode {
 }
 
 /// Translation conflict resolution strategy
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
+#[derive(Default, Clone, Copy, EnumString)]
 pub enum TranslationOverlap {
     /// Last found translation overwrites previous ones (default)
     #[default]
@@ -65,50 +57,46 @@ pub enum TranslationOverlap {
 }
 
 /// Main configuration structure for translation system
-#[derive(Deserialize)]
-pub struct TranslatableConfig {
+pub struct MacroConfig {
     /// Path to directory containing translation files
     ///
     /// # Example
     /// ```toml
     /// path = "./locales"
     /// ```
-    #[serde(default)]
-    path: LocalesPath,
+    path: String,
 
     /// File processing order strategy
     ///
     /// Default: alphabetical file processing
-    #[serde(default)]
     seek_mode: SeekMode,
 
     /// Translation conflict resolution strategy
     ///
     /// Determines behavior when multiple files contain the same translation
     /// path
-    #[serde(default)]
     overlap: TranslationOverlap,
 }
 
-impl TranslatableConfig {
+impl MacroConfig {
     /// Get reference to configured locales path
     pub fn path(&self) -> &str {
-        &self.path.0
+        &self.path
     }
 
     /// Get current seek mode strategy
-    pub fn seek_mode(&self) -> &SeekMode {
-        &self.seek_mode
+    pub fn seek_mode(&self) -> SeekMode {
+        self.seek_mode
     }
 
     /// Get current overlap resolution strategy
-    pub fn overlap(&self) -> &TranslationOverlap {
-        &self.overlap
+    pub fn overlap(&self) -> TranslationOverlap {
+        self.overlap
     }
 }
 
 /// Global configuration cache
-static TRANSLATABLE_CONFIG: OnceLock<TranslatableConfig> = OnceLock::new();
+static TRANSLATABLE_CONFIG: OnceLock<MacroConfig> = OnceLock::new();
 
 /// Load configuration from file or use defaults
 ///
@@ -116,20 +104,62 @@ static TRANSLATABLE_CONFIG: OnceLock<TranslatableConfig> = OnceLock::new();
 /// - Uses `OnceLock` for thread-safe singleton initialization
 /// - Missing config file is not considered an error
 /// - Config file must be named `translatable.toml` in root directory
+/// - Environment variables take precedence over TOML configuration
+/// - Supported environment variables:
+///   - `TRANSLATABLE_LOCALES_PATH`: Overrides translation directory path
+///   - `TRANSLATABLE_SEEK_MODE`: Sets file processing order ("alphabetical" or
+///     "unalphabetical")
+///   - `TRANSLATABLE_OVERLAP`: Sets conflict strategy ("overwrite" or "ignore")
 ///
 /// # Panics
 /// Will not panic but returns ConfigError for:
 /// - Malformed TOML syntax
 /// - Filesystem permission issues
-pub fn load_config() -> Result<&'static TranslatableConfig, ConfigError> {
+/// - Invalid environment variable values
+pub fn load_config() -> Result<&'static MacroConfig, ConfigError> {
     if let Some(config) = TRANSLATABLE_CONFIG.get() {
         return Ok(config);
     }
 
-    let config: TranslatableConfig =
-        toml_from_str(read_to_string("./translatable.toml")
-            .unwrap_or("".into()) // if no config file is found use defaults.
-            .as_str())?;
+    // Load base configuration from TOML file
+    let toml_content =
+        read_to_string("./translatable.toml").unwrap_or_default().parse::<Table>()?;
 
+    macro_rules! config_value {
+        ($env_var:expr, $key:expr, $default:expr) => {
+            var($env_var)
+                .ok()
+                .or_else(|| toml_content.get($key).and_then(|v| v.as_str()).map(|v| v.to_string()))
+                .unwrap_or_else(|| $default.into())
+        };
+
+        (parse($env_var:expr, $key:expr, $default:expr)) => {{
+            let value = var($env_var)
+                .ok()
+                .or_else(|| toml_content.get($key).and_then(|v| v.as_str()).map(|v| v.to_string()));
+
+            if let Some(value) = value {
+                value.parse().map_err(|_| ConfigError::InvalidValue($key.into(), value.into()))
+            } else {
+                Ok($default)
+            }
+        }};
+    }
+
+    let config = MacroConfig {
+        path: config_value!("TRANSLATABLE_LOCALES_PATH", "path", "./translations"),
+        overlap: config_value!(parse(
+            "TRANSLATABLE_OVERLAP",
+            "overlap",
+            TranslationOverlap::Ignore
+        ))?,
+        seek_mode: config_value!(parse(
+            "TRANSLATABLE_SEEK_MODE",
+            "seek_mode",
+            SeekMode::Alphabetical
+        ))?,
+    };
+
+    // Freeze configuration in global cache
     Ok(TRANSLATABLE_CONFIG.get_or_init(|| config))
 }
