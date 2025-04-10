@@ -49,7 +49,9 @@ impl TranslationNode {
     ///
     /// # Returns
     /// Reference to translations if path exists and points to leaf node
-    pub fn find_path(&self, path: &Vec<String>) -> Option<&TranslationObject> {
+    pub fn find_path<I: ToString>(&self, path: &Vec<I>) -> Option<&TranslationObject> {
+        let path = path.iter().map(|i| i.to_string()).collect::<Vec<String>>();
+
         match self {
             Self::Nesting(nested) => {
                 let (first, rest) = path.split_first()?;
@@ -73,7 +75,7 @@ impl ToTokens for TranslationNode {
                     .into_iter()
                     .map(|(key, value)| {
                         let value = value.to_token_stream();
-                        quote! { (#key, #value) }
+                        quote! { (#key.to_string(), #value) }
                     })
                     .collect::<Vec<_>>();
 
@@ -91,7 +93,7 @@ impl ToTokens for TranslationNode {
                     .into_iter()
                     .map(|(key, value)| {
                         let key = key.into_token_stream();
-                        quote! { (#key, #value) }
+                        quote! { (#key, #value.to_string()) }
                     })
                     .collect::<Vec<_>>();
 

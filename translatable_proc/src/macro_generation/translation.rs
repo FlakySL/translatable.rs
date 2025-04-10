@@ -60,7 +60,7 @@ pub fn translation_macro(input: TranslationMacroArgs) -> TokenStream2 {
 
             quote! {
                 #[doc(hidden)]
-                let path: Vec<String> = vec![#(#path.to_string()),*];
+                let path: Vec<_> = vec![#(#path.to_string()),*];
 
                 #translations_tokens
             }
@@ -71,20 +71,26 @@ pub fn translation_macro(input: TranslationMacroArgs) -> TokenStream2 {
 
             quote! {
                 #[doc(hidden)]
-                let path: Vec<String> = #path;
+                let path: Vec<_> = #path;
 
                 #translations_tokens
                     .find_path(&path)
-                    .ok_or_else(|| translatable::RuntimeError::PathNotFound(path.join("::")))?
+                    .ok_or_else(|| translatable::Error::PathNotFound(path.join("::")))?
             }
         },
     };
 
     quote! {
-        (|| {
-            #translation_object
-                .get(&#language)
-                .ok_or_else(|| translatable::RuntimeError::LanguageNotAvailable(#language.clone(), path.join("::")))?
+        (|| -> Result<String, translatable::Error> {
+            std::result::Result::Ok({
+                #[doc(hidden)]
+                let language = #language;
+
+                #translation_object
+                    .get(&language)
+                    .ok_or_else(|| translatable::Error::LanguageNotAvailable(language, path.join("::")))?
+                    .to_string()
+            })
         })()
     }
 }

@@ -2,6 +2,9 @@ mod error;
 
 // Export the private error module
 pub use error::RuntimeError as Error;
+/// Re-export the language in the crate top level as
+/// it's a macro parameter
+pub use shared::Language;
 /// Re-export the procedural macro for crate users
 pub use translatable_proc::translation;
 

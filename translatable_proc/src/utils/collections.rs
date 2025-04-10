@@ -13,7 +13,7 @@ pub fn map_to_tokens<K: ToTokens, V: ToTokens>(map: &HashMap<K, V>) -> TokenStre
 
     quote! {
         vec![#(#map),*]
-            .iter()
-            .collect::<HashMap<_, _>>()
+            .into_iter()
+            .collect::<std::collections::HashMap<_, _>>()
     }
 }

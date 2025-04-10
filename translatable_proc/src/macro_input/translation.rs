@@ -1,3 +1,4 @@
+use core::panic;
 use std::collections::HashMap;
 
 use proc_macro2::TokenStream as TokenStream2;
@@ -6,7 +7,10 @@ use syn::parse::{Parse, ParseStream};
 use syn::token::Static;
 use syn::{
     Error as SynError,
+    Expr,
+    ExprLit,
     Ident,
+    Lit,
     LitStr,
     Path,
     PathArguments,
@@ -77,22 +81,22 @@ impl TranslationMacroArgsError {
 /// used in a `parse_macro_input!` call.
 impl Parse for TranslationMacroArgs {
     fn parse(input: ParseStream) -> SynResult<Self> {
-        let language_arg = input.parse::<TokenStream2>()?;
-        let parsed_langauge_arg = match parse2::<LitStr>(language_arg.clone()) {
-            Ok(literal) => match literal.value().parse::<Language>() {
-                Ok(language) => InputType::Static(language),
+        let parsed_langauge_arg = match input.parse::<Expr>()? {
+            Expr::Lit(ExprLit { lit: Lit::Str(literal), .. }) => {
+                match literal.value().parse::<Language>() {
+                    Ok(language) => InputType::Static(language),
 
-                Err(_) => Err(TranslationMacroArgsError::InvalidIsoLiteral(literal.value())
-                    .into_syn_error(literal))?,
+                    Err(_) => Err(TranslationMacroArgsError::InvalidIsoLiteral(literal.value())
+                        .into_syn_error(literal))?,
+                }
             },
 
-            Err(_) => InputType::Dynamic(language_arg),
+            other => InputType::Dynamic(other.into_token_stream()),
         };
 
         input.parse::<Token![,]>()?;
 
-        let next_token = input.parse::<TokenStream2>()?;
-        let parsed_path_arg = match parse2::<Static>(next_token.clone()) {
+        let parsed_path_arg = match input.parse::<Static>() {
             Ok(_) => {
                 let language_arg = input
                     .parse::<Path>()?
@@ -109,15 +113,16 @@ impl Parse for TranslationMacroArgs {
                 InputType::Static(language_arg)
             },
 
-            Err(_) => InputType::Dynamic(next_token),
+            Err(_) => InputType::Dynamic(input.parse::<Expr>()?.to_token_stream()),
         };
 
         let mut replacements = HashMap::new();
-        if input.parse::<Token![,]>().is_ok() {
+        if input.peek(Token![,]) {
             while !input.is_empty() {
+                input.parse::<Token![,]>()?;
                 let key = input.parse::<Ident>()?;
                 let value = match input.parse::<Token![=]>() {
-                    Ok(_) => input.parse::<TokenStream2>()?,
+                    Ok(_) => input.parse::<Expr>()?.to_token_stream(),
 
                     Err(_) => key.clone().into_token_stream(),
                 };

@@ -15,6 +15,10 @@ use crate::TranslationNode;
 pub struct TranslationNodeCollection(HashMap<String, TranslationNode>);
 
 impl TranslationNodeCollection {
+    pub fn new(collection: HashMap<String, TranslationNode>) -> Self {
+        Self(collection)
+    }
+
     /// This method may be used to load a translation
     /// independently, if you are looking for an independent
     /// translation you may want to call find_path instead.
@@ -25,7 +29,6 @@ impl TranslationNodeCollection {
     /// # Returns
     /// A top level translation node, containing all the translations
     /// in that specific file.
-    #[cold]
     #[allow(unused)]
     pub fn get_node(&self, path: &str) -> Option<&TranslationNode> {
         self.0.get(&path.to_string())
@@ -43,7 +46,7 @@ impl TranslationNodeCollection {
     /// # Returns
     /// A translation object containing a specific translation
     /// in all it's available languages.
-    pub fn find_path(&self, path: &Vec<String>) -> Option<&TranslationObject> {
+    pub fn find_path<I: ToString>(&self, path: &Vec<I>) -> Option<&TranslationObject> {
         self.0.values().find_map(|node| node.find_path(path))
     }
 }
@@ -68,9 +71,9 @@ impl ToTokens for TranslationNodeCollection {
         });
 
         tokens.append_all(quote! {
-            translatable::shared::TranslationNodeCollection(
+            translatable::shared::TranslationNodeCollection::new(
                 vec![#(#node_collection),*]
-                    .iter()
+                    .into_iter()
                     .collect()
             )
         });

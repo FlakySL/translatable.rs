@@ -10,9 +10,8 @@
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 
-
-use crate::macro_input::translation::TranslationMacroArgs;
 use crate::macro_generation::translation::translation_macro;
+use crate::macro_input::translation::TranslationMacroArgs;
 
 mod data;
 mod macro_generation;
