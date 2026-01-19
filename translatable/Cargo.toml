@@ -16,7 +16,7 @@ keywords = [
 ]
 
 [dependencies]
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 translatable_proc = { version = "1", path = "../translatable_proc" }
 translatable_shared = { version = "1", path = "../translatable_shared/" }
 
