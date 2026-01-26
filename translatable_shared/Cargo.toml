@@ -10,7 +10,7 @@ authors = ["Esteve Autet <esteve@memw.es>", "Chiko <chiko@envs.net>"]
 
 [dependencies]
 proc-macro2 = "1.0.95"
-quote = "1.0.40"
+quote = "1.0.44"
 strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
 syn = { version = "2.0.100", features = ["full"] }
 thiserror = "2.0.12"
